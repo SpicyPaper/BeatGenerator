@@ -1,3 +1,3 @@
 # BeatGenerator
 
-Generate basic music based with movies as inputs.
+Generate basic music with movies as inputs.
