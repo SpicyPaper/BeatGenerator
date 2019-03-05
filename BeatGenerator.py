@@ -2,18 +2,59 @@ from midiutil import MIDIFile
 import numpy as np
 import cv2
 
-cap = cv2.VideoCapture('Farid_Hello.avi')
+def averageRGB(frame, everyNPixels):
+    """
+    Compute the average color of a given video
+    """
+    averageR = averageRGBChoice(frame, 0, everyNPixels)
+    averageG = averageRGBChoice(frame, 1, everyNPixels)
+    averageB = averageRGBChoice(frame, 2, everyNPixels)
+
+    averageColor = int((averageR + averageG + averageB) / 3)
+
+    print(averageColor)
+
+    return averageColor
+
+def averageRGBChoice(frame, colorStage, everyNPixels):
+    """
+    Compute the average of red, green or blue.
+    frame : the images
+    colorStage : 0 = red, 1 = green, 2 = blue
+    everyNPixels : take one pixel every n pixels
+    """
+    vect = frame.shape
+    dimX = vect[0]
+    dimY = vect[1]
+    dimZ = vect[2]
+
+    nbPixels = 0
+    averageColor = 0
+
+    for x in range(0, dimX):
+        for y in range(0, dimY):
+            if (x * y) % everyNPixels == 0:
+                nbPixels += 1
+                averageColor += frame[x][y][colorStage]
+    
+    # [0 ; 255 / 4]
+    averageColor = int(averageColor / nbPixels / 4)
+
+    return averageColor
+
+cap = cv2.VideoCapture('Class_Room_Tour.avi')
 degrees = []  # MIDI note number
 counter = 0
 
 while(cap.isOpened()):
     ret, frame = cap.read()
+    everyNImages = 10
 
     if frame is None:
         break
     else:
-        if counter % 10 == 0:
-            degrees.append(int(frame[10][25][0] / 4))
+        if counter % everyNImages == 0:
+            degrees.append(averageRGB(frame, 100))
         counter += 1
 
 cap.release()
