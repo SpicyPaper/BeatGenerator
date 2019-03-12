@@ -6,21 +6,42 @@ import argparse
 import random
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
-count = 1
+imgCounter = 1
 
-def diffBetween2Images(previousFrame, frame):
+def diffBetween2Images(previousFrame, frame, th):
+    
     diff = cv2.absdiff(previousFrame, frame)
     mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
 
-    th = 10
-    imask =  mask>th
+    imask = mask > th
 
     canvas = np.zeros_like(frame, np.uint8)
     canvas[imask] = frame[imask]
 
-    global count
-    cv2.imwrite("Diff/result" + str(count) + ".png", canvas)
-    count += 1
+    global imgCounter
+    cv2.imwrite("Diff/result" + str(imgCounter) + ".png", canvas)
+    imgCounter += 1
+
+def main_diffBetween2Images(cap, th):
+
+    degrees = []  # MIDI note number
+    counter = 0
+
+    if(cap.isOpened()):
+        ret, frame = cap.read()
+    
+    while(cap.isOpened()):
+        previousFrame = frame
+        ret, frame = cap.read()
+        everyNImages = 1
+
+        if frame is None:
+            break
+        else:
+            if counter % everyNImages == 0:
+                #degrees.append(averageRGB(frame, 100))
+                degrees.append(diffBetween2Images(previousFrame, frame, th))
+            counter += 1
 
 def averageRGB(frame, everyNPixels):
     """
@@ -84,24 +105,8 @@ if __name__ == "__main__":
     videoNameTMP = 'Videos/Fond_Noir_Tissu_Cam_Fixe'
 
     cap = cv2.VideoCapture(videoNameTMP + '.avi')
-    degrees = []  # MIDI note number
-    counter = 0
 
-    if(cap.isOpened()):
-        ret, frame = cap.read()
-
-    while(cap.isOpened()):
-        previousFrame = frame
-        ret, frame = cap.read()
-        everyNImages = 1
-
-        if frame is None:
-            break
-        else:
-            if counter % everyNImages == 0:
-                #degrees.append(averageRGB(frame, 100))
-                degrees.append(diffBetween2Images(previousFrame, frame))
-            counter += 1
+    main_diffBetween2Images(cap, 5)
 
     cap.release()
     cv2.destroyAllWindows()
