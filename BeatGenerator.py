@@ -55,7 +55,33 @@ def getNumberNote(musicDuration, tempo):
     durationInMinute = musicDuration / 60
     return int(tempo * durationInMinute)
 
+def multiple_tempo_test(track, channel, start_tempo, instrument, mdi, total_duration):
+    time     = 0    # In beats
+    duration = 1    # In beats
+    tempo    = start_tempo   # In BPM
+    volume   = 100  # 0-127, as per the MIDI standard
+    notes = []
 
+    MyMIDI.addProgramChange(track, channel, time, instrument) # Change the instrument
+    
+    music_split = 2
+
+    for i in range(music_split):
+
+        MyMIDI.addTempo(track, time, tempo)
+        
+        # Define the number of note the music must have according to the tempo
+        numberOfNote = getNumberNote(total_duration // music_split, tempo)  
+
+        # Generate the correct number of note to have a music of the desired length
+        for i in range(numberOfNote):
+            notes.append((time, random.randint(50, 100)))
+            time += duration
+
+        tempo *= 3
+
+    for time, pitch in notes:
+        MyMIDI.addNote(track, channel, pitch, time, duration, volume)
 
 if __name__ == "__main__":
     # TODO use that to get the first argument as the filename to use
@@ -84,29 +110,18 @@ if __name__ == "__main__":
     # cap.release()
     # cv2.destroyAllWindows()
 
-    track    = 0
-    channel  = 0
-    time     = 0    # In beats
-    duration = 1    # In beats
-    tempo    = 50   # In BPM
-    volume   = 100  # 0-127, as per the MIDI standard
+    
 
     # Get the duration of the video
     clip = VideoFileClip("Class_Room_Tour.avi")
-    print( clip.duration )  
-    # Define the number of note the music must have according to the tempo
-    numberOfNote = getNumberNote(clip.duration, tempo)
+    
 
-    # Generate the correct number of note to have a music of the desired length
-    for i in range(numberOfNote):
-        degrees.append(random.randint(10, 100))
-
-    MyMIDI = MIDIFile(1)  # One track, defaults to format 1 (tempo track is created
+    MyMIDI = MIDIFile(2)  # One track, defaults to format 1 (tempo track is created
                         # automatically)
-    MyMIDI.addTempo(track, time, tempo)
-
-    for i, pitch in enumerate(degrees):
-        MyMIDI.addNote(track, channel, pitch, time + i, duration, volume)
+    
+    multiple_tempo_test(0, 0, 60, 4, MyMIDI, clip.duration)
+    multiple_tempo_test(1, 1, 80, 109, MyMIDI, clip.duration)
+    
 
     with open("major-scale.mid", "wb") as output_file:
         MyMIDI.writeFile(output_file)
