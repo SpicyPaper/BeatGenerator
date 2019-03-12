@@ -6,6 +6,22 @@ import argparse
 import random
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
+count = 1
+
+def diffBetween2Images(previousFrame, frame):
+    diff = cv2.absdiff(previousFrame, frame)
+    mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+
+    th = 10
+    imask =  mask>th
+
+    canvas = np.zeros_like(frame, np.uint8)
+    canvas[imask] = frame[imask]
+
+    global count
+    cv2.imwrite("Diff/result" + str(count) + ".png", canvas)
+    count += 1
+
 def averageRGB(frame, everyNPixels):
     """
     Compute the average color of a given video
@@ -30,7 +46,6 @@ def averageRGBChoice(frame, colorStage, everyNPixels):
     vect = frame.shape
     dimX = vect[0]
     dimY = vect[1]
-    dimZ = vect[2]
 
     nbPixels = 0
     averageColor = 0
@@ -66,47 +81,54 @@ if __name__ == "__main__":
 
     # args = vars(parser.parse_args())
 
-    cap = cv2.VideoCapture('Class_Room_Tour.avi')
+    videoNameTMP = 'Videos/Fond_Noir_Tissu_Cam_Fixe'
+
+    cap = cv2.VideoCapture(videoNameTMP + '.avi')
     degrees = []  # MIDI note number
     counter = 0
 
-    # while(cap.isOpened()):
-    #     ret, frame = cap.read()
-    #     everyNImages = 10
+    if(cap.isOpened()):
+        ret, frame = cap.read()
 
-    #     if frame is None:
-    #         break
-    #     else:
-    #         if counter % everyNImages == 0:
-    #             degrees.append(averageRGB(frame, 100))
-    #         counter += 1
+    while(cap.isOpened()):
+        previousFrame = frame
+        ret, frame = cap.read()
+        everyNImages = 1
 
-    # cap.release()
-    # cv2.destroyAllWindows()
+        if frame is None:
+            break
+        else:
+            if counter % everyNImages == 0:
+                #degrees.append(averageRGB(frame, 100))
+                degrees.append(diffBetween2Images(previousFrame, frame))
+            counter += 1
 
-    track    = 0
-    channel  = 0
-    time     = 0    # In beats
-    duration = 1    # In beats
-    tempo    = 50   # In BPM
-    volume   = 100  # 0-127, as per the MIDI standard
+    cap.release()
+    cv2.destroyAllWindows()
 
-    # Get the duration of the video
-    clip = VideoFileClip("Class_Room_Tour.avi")
-    print( clip.duration )  
-    # Define the number of note the music must have according to the tempo
-    numberOfNote = getNumberNote(clip.duration, tempo)
+    # track    = 0
+    # channel  = 0
+    # time     = 0    # In beats
+    # duration = 1    # In beats
+    # tempo    = 50   # In BPM
+    # volume   = 100  # 0-127, as per the MIDI standard
 
-    # Generate the correct number of note to have a music of the desired length
-    for i in range(numberOfNote):
-        degrees.append(random.randint(10, 100))
+    # # Get the duration of the video
+    # clip = VideoFileClip(videoNameTMP + '.avi')
+    # print( clip.duration )  
+    # # Define the number of note the music must have according to the tempo
+    # numberOfNote = getNumberNote(clip.duration, tempo)
 
-    MyMIDI = MIDIFile(1)  # One track, defaults to format 1 (tempo track is created
-                        # automatically)
-    MyMIDI.addTempo(track, time, tempo)
+    # # Generate the correct number of note to have a music of the desired length
+    # for i in range(numberOfNote):
+    #     degrees.append(random.randint(10, 100))
 
-    for i, pitch in enumerate(degrees):
-        MyMIDI.addNote(track, channel, pitch, time + i, duration, volume)
+    # MyMIDI = MIDIFile(1)  # One track, defaults to format 1 (tempo track is created
+    #                     # automatically)
+    # MyMIDI.addTempo(track, time, tempo)
 
-    with open("major-scale.mid", "wb") as output_file:
-        MyMIDI.writeFile(output_file)
+    # for i, pitch in enumerate(degrees):
+    #     MyMIDI.addNote(track, channel, pitch, time + i, duration, volume)
+
+    # with open(videoNameTMP + '.mid', "wb") as output_file:
+    #     MyMIDI.writeFile(output_file)
