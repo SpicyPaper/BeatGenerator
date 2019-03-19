@@ -4,6 +4,7 @@ import cv2
 import sys
 import argparse
 import random
+import time
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 class BeatGenerator:
@@ -13,6 +14,8 @@ class BeatGenerator:
         self.clip = clip;
 
     def random(self, tracks):
+        start_time = time.clock()
+        self.printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
         for i in range(tracks):
             channel = i
             tempo = random.randint(30, 100)
@@ -20,7 +23,28 @@ class BeatGenerator:
             for j in range (getNumberNote(self.clip.duration, tempo)):
                 notes.append(random.randint(30, 60))
             self.result.append((channel, tempo, notes))
-        return self.result
+            self.printProgress(i + 1, tracks)
+        time.sleep(1)
+        self.printResult(time.clock() - start_time)
+
+    def printTitle(self, algoName):
+        print("     ____             __     ______                           __            ")
+        print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
+        print("   / __  / _ \/ __ `/ __/  / / __/ _ \/ __ \/ _ \/ ___/ __ `/ __/ __ \/ ___/")
+        print("  / /_/ /  __/ /_/ / /_   / /_/ /  __/ / / /  __/ /  / /_/ / /_/ /_/ / /    ")
+        print(" /_____/\___/\__,_/\__/   \____/\___/_/ /_/\___/_/   \__,_/\__/\____/_/     ")
+        print("\n                                                 Traitement d'image - 2019")
+        print("\n  Using:", algoName);
+
+    def printProgress(self, current, max):
+        progress = int(100 * current / max)
+        if (progress < 100):
+            print("  Computation progress: %d" % progress, "%", end='\r')
+        else:
+            print("  Computation progress: %d" % progress, "%")
+
+    def printResult(self, time):
+        print("  Time taken: %d" % time, "second(s)")
 
 
 def averageRGB(frame, everyNPixels):
@@ -91,11 +115,7 @@ if __name__ == "__main__":
     clip = VideoFileClip("Class_Room_Tour.avi")
 
     gen = BeatGenerator(clip)
-    for track in gen.random(4):
-        channel = track[0]
-        tempo = track[1]
-        notes = track[2]
-
+    gen.random(4)
 
     track    = 0
     channel  = 0
