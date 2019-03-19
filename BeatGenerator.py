@@ -4,7 +4,10 @@ import cv2
 import sys
 import argparse
 import random
+import os
+from midi2audio import FluidSynth
 from moviepy.video.io.VideoFileClip import VideoFileClip
+
 
 def averageRGB(frame, everyNPixels):
     """
@@ -125,3 +128,7 @@ if __name__ == "__main__":
 
     with open("major-scale.mid", "wb") as output_file:
         MyMIDI.writeFile(output_file)
+
+    fs = FluidSynth('sound_font.sf2')
+
+    fs.midi_to_audio('major-scale.mid', 'output.wav')
