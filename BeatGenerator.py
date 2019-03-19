@@ -6,7 +6,7 @@ import argparse
 import random
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
-def diffBetween2Images(cap, everyNImages, th):
+def diffBetween2Images(cap, maxSound, factor, everyNImages, th):
 
     degrees = []  # MIDI note number
     counter = 0
@@ -23,14 +23,14 @@ def diffBetween2Images(cap, everyNImages, th):
             break
         else:
             if counter % everyNImages == 0:
-                previousNbOfDiff, sound = __diffBetween2Images(previousNbOfDiff, previousFrame, frame, th)
+                previousNbOfDiff, sound = __diffBetween2Images(maxSound, factor, previousNbOfDiff, previousFrame, frame, th)
                 if sound != -1:
                     degrees.append(sound)
             counter += 1
 
     return degrees
 
-def __diffBetween2Images(previousNbOfDiff, previousFrame, frame, th):
+def __diffBetween2Images(maxSound, factor, previousNbOfDiff, previousFrame, frame, th):
     
     diff = cv2.absdiff(previousFrame, frame)
     mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
@@ -44,7 +44,10 @@ def __diffBetween2Images(previousNbOfDiff, previousFrame, frame, th):
         frameSize = np.sum(np.ones_like(frame, np.uint8))
         diffBetweenDiff = np.absolute(nbOfDiff - previousNbOfDiff)
         
-        sound = int(diffBetweenDiff / frameSize * 60)
+        sound = int(diffBetweenDiff / frameSize * maxSound * factor)
+
+        if sound > maxSound:
+            sound = maxSound
 
         return np.sum(imask), sound
 
@@ -163,11 +166,12 @@ if __name__ == "__main__":
 
     """Init"""
     degrees = []
+    maxSound = 60
     videoName = 'Fond_Noir_Tissu_Cam_Fixe_Start_Part'
     cap = cv2.VideoCapture('Videos/' + videoName + '.avi')
 
     """Apply algo on video"""
-    degrees = diffBetween2Images(cap, 10, 120)
+    degrees = diffBetween2Images(cap, maxSound, 1000, 10, 120)
     print(degrees)
     #degrees = averageRGB(cap, 100, 10)
     #degrees = averageRGBStage(cap, 100, 10, 0)
