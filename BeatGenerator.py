@@ -6,6 +6,23 @@ import argparse
 import random
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
+class BeatGenerator:
+
+    def __init__(self, clip):
+        self.result = []
+        self.clip = clip;
+
+    def random(self, tracks):
+        for i in range(tracks):
+            channel = i
+            tempo = random.randint(30, 100)
+            notes = []
+            for j in range (getNumberNote(self.clip.duration, tempo)):
+                notes.append(random.randint(30, 60))
+            self.result.append((channel, tempo, notes))
+        return self.result
+
+
 def averageRGB(frame, everyNPixels):
     """
     Compute the average color of a given video
@@ -69,20 +86,16 @@ if __name__ == "__main__":
     cap = cv2.VideoCapture('Class_Room_Tour.avi')
     degrees = []  # MIDI note number
     counter = 0
+    
+    # Get the duration of the video
+    clip = VideoFileClip("Class_Room_Tour.avi")
 
-    # while(cap.isOpened()):
-    #     ret, frame = cap.read()
-    #     everyNImages = 10
+    gen = BeatGenerator(clip)
+    for track in gen.random(4):
+        channel = track[0]
+        tempo = track[1]
+        notes = track[2]
 
-    #     if frame is None:
-    #         break
-    #     else:
-    #         if counter % everyNImages == 0:
-    #             degrees.append(averageRGB(frame, 100))
-    #         counter += 1
-
-    # cap.release()
-    # cv2.destroyAllWindows()
 
     track    = 0
     channel  = 0
@@ -91,9 +104,6 @@ if __name__ == "__main__":
     tempo    = 50   # In BPM
     volume   = 100  # 0-127, as per the MIDI standard
 
-    # Get the duration of the video
-    clip = VideoFileClip("Class_Room_Tour.avi")
-    print( clip.duration )  
     # Define the number of note the music must have according to the tempo
     numberOfNote = getNumberNote(clip.duration, tempo)
 
