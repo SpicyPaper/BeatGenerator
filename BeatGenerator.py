@@ -13,7 +13,7 @@ class BeatGenerator:
         self.result = []
         self.clip = clip;
 
-    def printTitle(self, algoName):
+    def __printTitle(self, algoName):
         print("     ____             __     ______                           __            ")
         print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
         print("   / __  / _ \/ __ `/ __/  / / __/ _ \/ __ \/ _ \/ ___/ __ `/ __/ __ \/ ___/")
@@ -22,7 +22,7 @@ class BeatGenerator:
         print("\n                                                 Traitement d'image - 2019")
         print("\n  Using:", algoName);
 
-    def printProgress(self, current, max):
+    def __printProgress(self, current, max):
         progress = int(100 * current / max)
         current = int(progress / 2)
         print(" [", end='')
@@ -37,21 +37,36 @@ class BeatGenerator:
         else:
             print(" %d" % progress, "%")
 
-    def printResult(self, time):
+    def __printResult(self, time):
         print("  Time taken: %d" % time, "second(s)")
 
     def random(self, tracks):
         start_time = time.clock()
-        self.printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
+        self.__printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
         for i in range(tracks):
-            channel = i
+            track = i
             tempo = random.randint(30, 100)
             notes = []
             for j in range (getNumberNote(self.clip.duration, tempo)):
                 notes.append(random.randint(30, 60))
-            self.result.append((channel, tempo, notes))
-            self.printProgress(i + 1, tracks)
-        self.printResult(time.clock() - start_time)
+            self.result.append((track, tempo, notes))
+            self.__printProgress(i + 1, tracks)
+        self.__printResult(time.clock() - start_time)
+
+    def getMIDI(self):
+        nb_tracks = len(self.result)
+        MIDI = MIDIFile(nb_tracks)
+
+        j = 0
+        for track, tempo, notes in self.result:
+            MIDI.addTempo(track, 0, tempo)
+            for i, note in enumerate(notes):
+                MIDI.addProgramChange(track, i, i, 109 + j)
+                MIDI.addNote(track, i, note, i, 1, 100)
+            j += 1
+        
+        return MIDI
+
 
 
 def averageRGB(frame, everyNPixels):
@@ -106,44 +121,11 @@ def getNumberNote(musicDuration, tempo):
 
 
 if __name__ == "__main__":
-    # TODO use that to get the first argument as the filename to use
-    # # Set an argument parser
-    # parser = argparse.ArgumentParser(description='Convert a video file (.avi) to a music.')
-    # parser.add_argument('filename', metavar='filename',
-    #                     help='a video file')
 
-    # args = vars(parser.parse_args())
-
-    cap = cv2.VideoCapture('Class_Room_Tour.avi')
-    degrees = []  # MIDI note number
-    counter = 0
-    
-    # Get the duration of the video
     clip = VideoFileClip("Class_Room_Tour.avi")
-
     gen = BeatGenerator(clip)
     gen.random(4)
-
-    track    = 0
-    channel  = 0
-    time     = 0    # In beats
-    duration = 1    # In beats
-    tempo    = 50   # In BPM
-    volume   = 100  # 0-127, as per the MIDI standard
-
-    # Define the number of note the music must have according to the tempo
-    numberOfNote = getNumberNote(clip.duration, tempo)
-
-    # Generate the correct number of note to have a music of the desired length
-    for i in range(numberOfNote):
-        degrees.append(random.randint(10, 100))
-
-    MyMIDI = MIDIFile(1)  # One track, defaults to format 1 (tempo track is created
-                        # automatically)
-    MyMIDI.addTempo(track, time, tempo)
-
-    for i, pitch in enumerate(degrees):
-        MyMIDI.addNote(track, channel, pitch, time + i, duration, volume)
+    MIDI = gen.getMIDI()
 
     with open("major-scale.mid", "wb") as output_file:
-        MyMIDI.writeFile(output_file)
+        MIDI.writeFile(output_file)
