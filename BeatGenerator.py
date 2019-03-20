@@ -13,20 +13,6 @@ class BeatGenerator:
         self.result = []
         self.clip = clip;
 
-    def random(self, tracks):
-        start_time = time.clock()
-        self.printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
-        for i in range(tracks):
-            channel = i
-            tempo = random.randint(30, 100)
-            notes = []
-            for j in range (getNumberNote(self.clip.duration, tempo)):
-                notes.append(random.randint(30, 60))
-            self.result.append((channel, tempo, notes))
-            self.printProgress(i + 1, tracks)
-        time.sleep(1)
-        self.printResult(time.clock() - start_time)
-
     def printTitle(self, algoName):
         print("     ____             __     ______                           __            ")
         print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
@@ -38,13 +24,34 @@ class BeatGenerator:
 
     def printProgress(self, current, max):
         progress = int(100 * current / max)
+        current = int(progress / 2)
+        print(" [", end='')
+        for i in range (current):
+            print("=", end='')
+        for i in range (50 - current):
+            print(" ", end='')
+        print("]", end='')
+
         if (progress < 100):
-            print("  Computation progress: %d" % progress, "%", end='\r')
+            print(" %d" % progress, "%", end='\r')
         else:
-            print("  Computation progress: %d" % progress, "%")
+            print(" %d" % progress, "%")
 
     def printResult(self, time):
         print("  Time taken: %d" % time, "second(s)")
+
+    def random(self, tracks):
+        start_time = time.clock()
+        self.printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
+        for i in range(tracks):
+            channel = i
+            tempo = random.randint(30, 100)
+            notes = []
+            for j in range (getNumberNote(self.clip.duration, tempo)):
+                notes.append(random.randint(30, 60))
+            self.result.append((channel, tempo, notes))
+            self.printProgress(i + 1, tracks)
+        self.printResult(time.clock() - start_time)
 
 
 def averageRGB(frame, everyNPixels):
