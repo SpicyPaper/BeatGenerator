@@ -6,8 +6,19 @@ import argparse
 import random
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
-def diffBetween2Images(cap, maxSound, factor, everyNImages, th):
+def diffBetween2Images(videoName, maxSound, factor, everyNImages, th):
+    """
+    Return all notes compute based on the diff between
+    2 consecutives frame of the video
 
+    videoName :     the video file name without extension
+    maxSound :      max value that can be returned for a sound
+    factor :        applied on the note, should be big if the video
+                        is quiet, should be low if the video is agitated
+    everyNImages :  take only n images of the video
+    th :            the threshold [0 ; 255]
+    """
+    cap = videoCap(videoName)
     degrees = []  # MIDI note number
     counter = 0
     previousNbOfDiff = -1
@@ -63,11 +74,17 @@ def __diffBetween2Images_display(previousFrame, frame, th, imgCounter):
 
     cv2.imwrite("DiffImages/result" + str(imgCounter) + ".png", canvas)
 
-def averageRGB(cap, everyNPixels, everyNImages):
+def averageRGB(videoName, everyNPixels, everyNImages):
     """
-    Compute the average color of a given video
+    Return all notes compute based on average color of
+    a given video
+
+    videoName :         the video file name without extension
+    everyNPixels :      take only n pixels of the image
+    everyNImages :      take only n images of the video
     """
 
+    cap = videoCap(videoName)
     degrees = []  # MIDI note number
     imagesCounter = 0
 
@@ -92,11 +109,18 @@ def averageRGB(cap, everyNPixels, everyNImages):
 
     return degrees
 
-def averageRGBStage(cap, everyNPixels, everyNImages, colorStage):
+def averageRGBChannel(videoName, everyNPixels, everyNImages, colorChannel):
     """
-    Compute the average color of a given video
+    Return all notes compute based on average red, green
+    or blue channel of a given video
+
+    videoName :         the video file name without extension
+    everyNPixels :      take only n pixels of the image
+    everyNImages :      take only n images of the video
+    colorChannel :      0 = red, 1 = green, 2 = blue
     """
 
+    cap = videoCap(videoName)
     degrees = []  # MIDI note number
     imagesCounter = 0
 
@@ -111,19 +135,19 @@ def averageRGBStage(cap, everyNPixels, everyNImages, colorStage):
             break
         else:
             if imagesCounter % everyNImages == 0:
-                averageStage = __averageRGBChoiceOneFrame(frame, colorStage, everyNPixels)
-                degrees.append(averageStage)
+                averageColorChannel = __averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels)
+                degrees.append(averageColorChannel)
 
     return degrees
 
-def __averageRGBChoiceOneFrame(frame, colorStage, everyNPixels):
+def __averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels):
     """
     Compute a sound between [0 ; 255 / 4] based on the average of
     red, green or blue in a given frame.
 
-    frame : the images
-    colorStage : 0 = red, 1 = green, 2 = blue
-    everyNPixels : take one pixel every n pixels
+    frame :             the images
+    colorChannel :      0 = red, 1 = green, 2 = blue
+    everyNPixels :      take one pixel every n pixels on the image
     """
 
     vect = frame.shape
@@ -137,7 +161,7 @@ def __averageRGBChoiceOneFrame(frame, colorStage, everyNPixels):
         for y in range(0, dimY):
             if (x * y) % everyNPixels == 0:
                 nbPixels += 1
-                averageColor += frame[x][y][colorStage]
+                averageColor += frame[x][y][colorChannel]
 
     # [0 ; 255 / 4]
     averageColor = int(averageColor / nbPixels / 4)
@@ -146,14 +170,21 @@ def __averageRGBChoiceOneFrame(frame, colorStage, everyNPixels):
 
 def getNumberNote(musicDuration, tempo):
     """
-    Return the number of notes that the music must have to be of the specified duration
-    musicDuration : the duration of the music (in seconds)
-    tempo : the number of BMP of the music
+    Return the number of notes that the music must
+    have to be of the specified duration
+
+    musicDuration :     the duration of the music (in seconds)
+    tempo :             the number of BMP of the music
     """
     durationInMinute = musicDuration / 60
     return int(tempo * durationInMinute)
 
+def videoCap(videoName):
+    """
 
+    """
+    cap = cv2.VideoCapture('Videos/' + videoName + '.avi')
+    return cap
 
 if __name__ == "__main__":
     # TODO use that to get the first argument as the filename to use
@@ -167,24 +198,20 @@ if __name__ == "__main__":
     """Init"""
     degrees = []
     maxSound = 60
-    videoName = 'Fond_Noir_Tissu_Cam_Fixe_Start_Part'
-    cap = cv2.VideoCapture('Videos/' + videoName + '.avi')
+    videoName = 'Class_Room_Tour'    
 
     """Apply algo on video"""
-    degrees = diffBetween2Images(cap, maxSound, 1000, 10, 120)
+    #degrees = diffBetween2Images(videoName, maxSound, 1000, 10, 120)
+    degrees = averageRGB(videoName, 100, 10)
+    #degrees = averageRGBChannel(videoName, 100, 10, 0)
     print(degrees)
-    #degrees = averageRGB(cap, 100, 10)
-    #degrees = averageRGBStage(cap, 100, 10, 0)
-
-    """Release"""
-    cap.release()
 
     """Create the music based on previous info"""
     track    = 0
     channel  = 0
     time     = 0    # In beats
     duration = 1    # In beats
-    tempo    = 50   # In BPM
+    tempo    = 170   # In BPM
     volume   = 100  # 0-127, as per the MIDI standard
 
     # Get the duration of the video
