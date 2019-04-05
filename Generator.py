@@ -54,27 +54,10 @@ class Generator:
         musicDuration :     the duration of the music (in seconds)
         tempo :             the number of BMP of the music
         """
-        durationInMinute = musicDuration / 60
-        return int(tempo * durationInMinute)
+        return tempo / 60 * musicDuration
 
     def getMIDI(self):
         return MIDIFile(1)
-
-    """
-    TODO see what to do with that
-    def getMIDI(self):
-        nb_tracks = len(self.result)
-        MIDI = MIDIFile(nb_tracks)
-
-        j = 0
-        for track, tempo, notes in self.result:
-            MIDI.addTempo(track, 0, tempo)
-            for i, note in enumerate(notes):
-                MIDI.addProgramChange(track, i, i, 109 + j)
-                MIDI.addNote(track, i, note, i, 1, 100)
-            j += 1
-        
-        return MIDI"""
 
     def random(self, tracks):
         start_time = time.clock()
@@ -157,26 +140,38 @@ class Generator:
 
         cv2.imwrite("DiffImages/result" + str(imgCounter) + ".png", canvas)
 
-    def averageRGB(self, everyNPixels, everyNImages):
+    def averageRGB(self):
         """
         Return all notes compute based on average color of
         a given video
-
-        everyNPixels :      take only n pixels of the image
-        everyNImages :      take only n images of the video
         """
 
-        track = Track(0, 1, 2)
+        track = Track(0, 73, 2)
         # TODO The tempo, volume and the duration could change depending on the algo
         tempo = 200
         # TODO The method __getNumberNotes has to accept the duration in order to compute the correct number of notes per bloc
-        duration = 1
         volume = 100
 
         cap = self.videoCap(self.videoName)
         notes = []
-        notesNumberPerBloc = self.__getNumberNotes(track.blocDuration, tempo)
-        print(notesNumberPerBloc)
+        notesNbPerBloc = int(self.__getNumberNotes(track.blocDuration, tempo))
+        noteDuration = track.blocDuration / notesNbPerBloc
+
+        nbBlocInClip = self.clip.duration / track.blocDuration
+        nbNeededNotes = notesNbPerBloc * nbBlocInClip
+        totNbImgInClip = self.clip.fps * self.clip.duration
+
+        everyNImages = int(totNbImgInClip / nbNeededNotes)
+        everyNPixels = 100
+
+        print(notesNbPerBloc)
+        print(noteDuration)
+        print(nbBlocInClip)
+        print(self.clip.duration)
+        print(nbNeededNotes)
+        print(totNbImgInClip)
+        print(everyNImages)
+
         imagesCounter = 0
         notesCounter = 0
 
@@ -202,13 +197,14 @@ class Generator:
                     notes.append(track.createNoteVolTuple(note, volume))
                 
                     # Test if one bloc can be done
-                    if notesCounter % notesNumberPerBloc == 0:
-                        track.addBlocInfo(duration, tempo)
+                    if notesCounter % notesNbPerBloc == 0:
+                        track.addBlocInfo(noteDuration, tempo)
                         track.addNotes(notes)
+                        print("ok", len(notes))
                         notes = []
 
         if len(notes) > 0:
-            track.addBlocInfo(duration, tempo)
+            track.addBlocInfo(noteDuration, tempo)
             track.addNotes(notes)
 
         self.tracks.append(track)

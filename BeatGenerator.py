@@ -5,19 +5,22 @@ from Track import Track
 if __name__ == "__main__":
     
     gen = Generator("Class_Room_Tour")
-    gen.averageRGB(100, 20)
+    gen.averageRGB()
     MIDI = gen.getMIDI()
 
     for track in gen.tracks:
         MIDI.addProgramChange(track.num, 0, 0, track.instru)
 
         for i, (notes, (noteDuration, tempo)) in enumerate(zip(track.notes, track.blocInfos)):
+            
+            quarterNoteMultiplier = (tempo / 60)
 
             time = track.blocDuration * i
-            MIDI.addTempo(track.num, time, tempo)
+            MIDI.addTempo(track.num, time * quarterNoteMultiplier, tempo)
             
             for note, volume in notes:
-                MIDI.addNote(track.num, 0, note, time, noteDuration, volume)
+                MIDI.addNote(track.num, 0, note, time * quarterNoteMultiplier, noteDuration * quarterNoteMultiplier, volume)
+                print(time)
                 time += noteDuration
 
     with open('Sounds/' + gen.videoName + '.mid', "wb") as output_file:
