@@ -5,7 +5,10 @@ import sys
 import argparse
 import random
 import os
-from midi2audio import FluidSynth
+import shutil
+import time
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 from moviepy.video.io.VideoFileClip import VideoFileClip
 
 
@@ -86,6 +89,44 @@ def multiple_tempo_test(track, channel, start_tempo, instrument, mdi, total_dura
     for time, pitch in notes:
         MyMIDI.addNote(track, channel, pitch, time, duration, volume)
 
+def convertMdiToMp3(mdiName):
+
+    timeoutDelay = 30   # wait for 30 seconds
+    filename = os.path.splitext(mdiName)[0] + ".mp3"
+
+    # options = Options()
+    # options.headless = False
+
+    # # Set firefox parameters to download easily the file
+    # profile = webdriver.FirefoxProfile()
+    # profile.set_preference("browser.download.folderList", 2)
+    # profile.set_preference("browser.download.manager.showWhenStarting", False)
+    # print(os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop'))
+
+    savePath = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+
+    # profile.set_preference("browser.download.dir", savePath)
+    # profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
+
+    # # Go to the site and download the file
+    # driver = webdriver.Firefox(options=options, executable_path=r'geckodriver.exe', firefox_profile=profile)
+    # driver.get('https://www.onlineconverter.com/midi-to-mp3')
+    # driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
+    # driver.find_element_by_id('convert-button').click()
+
+
+    print("Converting the file..." flush=True)
+    # Wait until the file is downloaded
+    while not os.path.exists(os.path.join(savePath, filename)) and timeoutDelay > 0:
+        time.sleep(1)
+        timeoutDelay -= 1
+
+    # Move the file to the current directory
+    shutil.move(os.path.join(savePath, filename), os.path.join(os.getcwd(), filename))
+
+    
+
+
 if __name__ == "__main__":
     # TODO use that to get the first argument as the filename to use
     # # Set an argument parser
@@ -126,9 +167,8 @@ if __name__ == "__main__":
     multiple_tempo_test(1, 1, 80, 109, MyMIDI, clip.duration)
     
 
-    with open("major-scale.mid", "wb") as output_file:
+    with open("music.mid", "wb") as output_file:
         MyMIDI.writeFile(output_file)
 
-    fs = FluidSynth('sound_font.sf2')
+    convertMdiToMp3("music.mid")
 
-    fs.midi_to_audio('major-scale.mid', 'output.wav')
