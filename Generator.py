@@ -16,8 +16,15 @@ class Generator:
     def __init__(self, videoName):
         self.result = []
         self.tracks = []
+        self.lastTrackNum = 0
         self.videoName = videoName
         self.clip = VideoFileClip('Videos/' + videoName + '.avi')
+        self.num = None
+        self.instru = None
+        self.blocDuration = None
+        self.tempo = None
+        self.volume = None
+        self.midi = None
 
     def __printTitle(self, algoName):
         print("     ____             __     ______                           __            ")
@@ -56,8 +63,101 @@ class Generator:
         """
         return tempo / 60 * musicDuration
 
-    def getMIDI(self):
-        return MIDIFile(1)
+    def __computeTrackInfo(self, currentTrack):
+
+        # +1 because the previous not needs to finish playing, so if notesNbPerBloc = 4, only 3 notes will be played
+        notesNbPerBloc = int(self.__getNumberNotes(currentTrack.blocDuration, self.tempo))
+        if notesNbPerBloc == 0:
+            notesNbPerBloc = 1
+        noteDuration = currentTrack.blocDuration / notesNbPerBloc
+
+        nbBlocInClip = self.clip.duration / currentTrack.blocDuration
+        nbNeededNotes = notesNbPerBloc * nbBlocInClip
+        totNbImgInClip = self.clip.fps * self.clip.duration
+
+        everyNImages = int(totNbImgInClip / nbNeededNotes)
+
+        return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages
+
+    def __computeTrackParams(self, usedNormedValue, blocDuration = 5, volume = 100):
+
+        if self.num == None:
+            self.num = self.lastTrackNum
+            self.lastTrackNum
+
+        if self.instru == None:
+            self.instru = int(usedNormedValue * 127)
+
+        if self.blocDuration == None:
+            self.blocDuration = blocDuration
+
+        if self.tempo == None:
+            self.tempo = int(usedNormedValue * 180)
+
+        if self.volume == None:
+            self.volume = volume
+
+    def __resetTrackParams(self, num = None, instru = None, blocDuration = None, tempo = None, volume = None):
+        """
+        Reset all the track params.
+        Should be called at the end of a track creation with all the params to None.
+        """
+        self.num = num
+        self.instru = instru
+        self.blocDuration = blocDuration
+        self.tempo = tempo
+        self.volume = volume
+
+    def createMidi(self, printInfo = False):
+        """
+        Create the midi file and write it in a folder with the created tracks.
+        """
+        self.midi = MIDIFile(15)
+
+        trackCounter = 0
+        for track in self.tracks:
+            blocCounter = 0
+            trackCounter += 1
+            if printInfo:
+                print("Track Id : {}".format(trackCounter))
+                print("  | Num : {}".format(track.num))
+                print("  | Instru : {}".format(track.instru))
+                print("  | Bloc duration {}".format(track.blocDuration))
+            self.midi.addProgramChange(track.num, 0, 0, track.instru)
+
+            time = 0
+            for i, (notes, (noteDuration, tempo)) in enumerate(zip(track.notes, track.blocInfos)):
+                blocCounter += 1
+                if printInfo:
+                    print("  | Bloc Id : {}".format(blocCounter))
+                    print("    | Note duration : {}".format(noteDuration))
+                    print("    | Tempo : {}".format(tempo))
+                    print("    | Notes : ", notes)
+                
+                quarterNoteMultiplier = (tempo / 60)
+
+                #time = track.blocDuration * i
+                #time *= quarterNoteMultiplier
+                noteDuration *= quarterNoteMultiplier
+                print(time, noteDuration)
+                self.midi.addTempo(track.num, time, tempo)
+                
+                for note, volume in notes:
+
+                    print("  ", time, noteDuration)
+                    self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
+                    time += noteDuration
+
+        with open('Sounds/' + self.videoName + '.mid', "wb") as output_file:
+            self.midi.writeFile(output_file)
+
+    def setTrackParams(self, blocDuration, instru = None):
+        """
+        Set the duration of each bloc.
+        Each time the algo should compute a new tempo.
+        """
+        self.blocDuration = blocDuration
+        self.instru = instru
 
     def random(self, tracks):
         start_time = time.clock()
@@ -140,47 +240,35 @@ class Generator:
 
         cv2.imwrite("DiffImages/result" + str(imgCounter) + ".png", canvas)
 
-    def averageRGB(self):
+    def averageRGB(self, everyNPixels = 100):
         """
         Return all notes compute based on average color of
         a given video
+
+        everyNPixels : take one pixel every N pixels
         """
 
-        track = Track(0, 73, 2)
-        # TODO The tempo, volume and the duration could change depending on the algo
-        tempo = 200
-        # TODO The method __getNumberNotes has to accept the duration in order to compute the correct number of notes per bloc
-        volume = 100
-
+        # Init vars
         cap = self.videoCap(self.videoName)
         notes = []
-        notesNbPerBloc = int(self.__getNumberNotes(track.blocDuration, tempo))
-        noteDuration = track.blocDuration / notesNbPerBloc
-
-        nbBlocInClip = self.clip.duration / track.blocDuration
-        nbNeededNotes = notesNbPerBloc * nbBlocInClip
-        totNbImgInClip = self.clip.fps * self.clip.duration
-
-        everyNImages = int(totNbImgInClip / nbNeededNotes)
-        everyNPixels = 100
-
-        print(notesNbPerBloc)
-        print(noteDuration)
-        print(nbBlocInClip)
-        print(self.clip.duration)
-        print(nbNeededNotes)
-        print(totNbImgInClip)
-        print(everyNImages)
 
         imagesCounter = 0
+        imagesCounterTot = 0
         notesCounter = 0
+        currentTrack = Track(None, None, None)
 
         if(cap.isOpened()):
             ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(frame, everyNPixels, currentTrack)
         
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
+            imagesCounterTot += 1
             imagesCounter += 1
+            self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
@@ -191,23 +279,47 @@ class Generator:
                     averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
 
                     note = int((averageR + averageG + averageB) / 3 / 4)
-                    print(note)
 
                     notesCounter += 1
-                    notes.append(track.createNoteVolTuple(note, volume))
+                    notes.append(currentTrack.createNoteVolTuple(note, self.volume))
                 
                     # Test if one bloc can be done
                     if notesCounter % notesNbPerBloc == 0:
-                        track.addBlocInfo(noteDuration, tempo)
-                        track.addNotes(notes)
-                        print("ok", len(notes))
+                        currentTrack.addBlocInfo(noteDuration, self.tempo)
+                        currentTrack.addNotes(notes)
                         notes = []
+                        notesCounter = 0
+                        imagesCounter = 0
+
+                        if(cap.isOpened()):
+                            self.__resetTrackParams(self.num, self.instru, self.blocDuration)
+                            ret, frame = cap.read()
+                            imagesCounter += 1
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(frame, everyNPixels, currentTrack)
 
         if len(notes) > 0:
-            track.addBlocInfo(noteDuration, tempo)
-            track.addNotes(notes)
+            currentTrack.addBlocInfo(noteDuration, self.tempo)
+            currentTrack.addNotes(notes)
 
-        self.tracks.append(track)
+        self.tracks.append(currentTrack)
+        self.__resetTrackParams()
+
+    def __averageRGBComputeTrack(self, frame, everyNPixels, currentTrack):
+        
+        averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
+        averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
+        averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+
+        averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
+
+        self.__computeTrackParams(averageRGBNorm)
+        currentTrack.num = self.num
+        currentTrack.instru = self.instru
+        currentTrack.blocDuration = self.blocDuration
+
+        notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages = self.__computeTrackInfo(currentTrack)
+
+        return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack
 
     def averageRGBChannel(self, videoName, everyNPixels, everyNImages, colorChannel):
         """
@@ -242,7 +354,7 @@ class Generator:
 
     def __averageRGBChoiceOneFrame(self, frame, colorChannel, everyNPixels):
         """
-        Compute a sound between [0 ; 255 / 4] based on the average of
+        Compute a sound between [0 ; 255] based on the average of
         red, green or blue in a given frame.
 
         frame :             the images

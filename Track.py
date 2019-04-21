@@ -8,8 +8,8 @@ class Track:
         self.blocInfos = []
         self.notes = []
     
-    def addBlocInfo(self, duration, tempo):
-        self.blocInfos.append( (duration, tempo) )
+    def addBlocInfo(self, noteDuration, tempo):
+        self.blocInfos.append( ( noteDuration, tempo) )
 
     def addNotes(self, notes):
         """
