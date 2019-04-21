@@ -17,6 +17,7 @@ class Generator:
         self.result = []
         self.tracks = []
         self.lastTrackNum = 0
+        self.trackNb = 5
         self.videoName = videoName
         self.clip = VideoFileClip('Videos/' + videoName + '.avi')
         self.num = None
@@ -64,8 +65,16 @@ class Generator:
         return tempo / 60 * musicDuration
 
     def __computeTrackInfo(self, currentTrack):
+        """
+        Returns track information, like : 
+        - number of notes per bloc
+        - duration of a note
+        - total number of image in the clip
+        - take only one image every n images
 
-        # +1 because the previous not needs to finish playing, so if notesNbPerBloc = 4, only 3 notes will be played
+        currentTrack : the current track
+        """
+
         notesNbPerBloc = int(self.__getNumberNotes(currentTrack.blocDuration, self.tempo))
         if notesNbPerBloc == 0:
             notesNbPerBloc = 1
@@ -80,10 +89,21 @@ class Generator:
         return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages
 
     def __computeTrackParams(self, usedNormedValue, blocDuration = 5, volume = 100):
+        """
+        Give a value to the track parameters if they are equal to None.
+        All value are compute based on the used normed value.
+
+        usedNormedValue : value to compute the parameters, should be [0 ; 1]
+        blocDuration : the duration of a bloc of notes in secondes
+        value : the volume of the notes [0 ; 100]
+        """
 
         if self.num == None:
-            self.num = self.lastTrackNum
-            self.lastTrackNum
+            if self.lastTrackNum >= self.trackNb:
+                print("Their is no more available tracks, increase the number of track!")
+            else:
+                self.num = self.lastTrackNum
+                self.lastTrackNum
 
         if self.instru == None:
             self.instru = int(usedNormedValue * 127)
@@ -101,6 +121,12 @@ class Generator:
         """
         Reset all the track params.
         Should be called at the end of a track creation with all the params to None.
+
+        num : the track number
+        instru : the instrument that will play the notes
+        blocDuration : the duration of a bloc of notes
+        tempo : the tempo of the bloc
+        volume : the volume at which the notes will be played
         """
         self.num = num
         self.instru = instru
@@ -108,17 +134,31 @@ class Generator:
         self.tempo = tempo
         self.volume = volume
 
-    def createMidi(self, printInfo = False):
+    def setTrackParams(self, blocDuration, instru = None, trackNb = 5):
         """
-        Create the midi file and write it in a folder with the created tracks.
+        Set some of the track parameters.
+
+        blocDuration : the duration of each bloc of notes
+        instru : the instrument that will play the notes
+        trackNb : the number of available tracks
         """
-        self.midi = MIDIFile(15)
+        self.blocDuration = blocDuration
+        self.instru = instru
+        self.trackNb = trackNb
+
+    def createMidi(self, verbose = False):
+        """
+        Create the midi file with the created tracks and write the resulting midi file in a folder.
+
+        verbose : True if the info should be printed, False otherwise
+        """
+        self.midi = MIDIFile(self.trackNb)
 
         trackCounter = 0
         for track in self.tracks:
             blocCounter = 0
             trackCounter += 1
-            if printInfo:
+            if verbose:
                 print("Track Id : {}".format(trackCounter))
                 print("  | Num : {}".format(track.num))
                 print("  | Instru : {}".format(track.instru))
@@ -128,7 +168,7 @@ class Generator:
             time = 0
             for i, (notes, (noteDuration, tempo)) in enumerate(zip(track.notes, track.blocInfos)):
                 blocCounter += 1
-                if printInfo:
+                if verbose:
                     print("  | Bloc Id : {}".format(blocCounter))
                     print("    | Note duration : {}".format(noteDuration))
                     print("    | Tempo : {}".format(tempo))
@@ -136,28 +176,16 @@ class Generator:
                 
                 quarterNoteMultiplier = (tempo / 60)
 
-                #time = track.blocDuration * i
-                #time *= quarterNoteMultiplier
                 noteDuration *= quarterNoteMultiplier
-                print(time, noteDuration)
                 self.midi.addTempo(track.num, time, tempo)
                 
                 for note, volume in notes:
 
-                    print("  ", time, noteDuration)
                     self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
                     time += noteDuration
 
         with open('Sounds/' + self.videoName + '.mid', "wb") as output_file:
             self.midi.writeFile(output_file)
-
-    def setTrackParams(self, blocDuration, instru = None):
-        """
-        Set the duration of each bloc.
-        Each time the algo should compute a new tempo.
-        """
-        self.blocDuration = blocDuration
-        self.instru = instru
 
     def random(self, tracks):
         start_time = time.clock()
@@ -185,7 +213,7 @@ class Generator:
         th :            the threshold [0 ; 255]
         """
         cap = self.videoCap(videoName)
-        degrees = []  # MIDI note number
+        notes = []  # MIDI note number
         counter = 0
         previousNbOfDiff = -1
 
@@ -202,10 +230,10 @@ class Generator:
                 if counter % everyNImages == 0:
                     previousNbOfDiff, sound = self.__diffBetween2Images(maxSound, factor, previousNbOfDiff, previousFrame, frame, th)
                     if sound != -1:
-                        degrees.append(sound)
+                        notes.append(sound)
                 counter += 1
 
-        return degrees
+        return notes
 
     def __diffBetween2Images(self, maxSound, factor, previousNbOfDiff, previousFrame, frame, th):
         
@@ -242,10 +270,9 @@ class Generator:
 
     def averageRGB(self, everyNPixels = 100):
         """
-        Return all notes compute based on average color of
-        a given video
+        Create a track based on the track parameters and the average color of the video.
 
-        everyNPixels : take one pixel every N pixels
+        everyNPixels : takes one pixel every N pixels
         """
 
         # Init vars
@@ -305,6 +332,13 @@ class Generator:
         self.__resetTrackParams()
 
     def __averageRGBComputeTrack(self, frame, everyNPixels, currentTrack):
+        """
+        Update track parameters based on a frame of the video.
+
+        frame : a frame of the video
+        everyNPixels : takes one pixel every N pixels
+        currentTrack : the track that should be update
+        """
         
         averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
         averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
@@ -333,7 +367,7 @@ class Generator:
         """
 
         cap = self.videoCap(videoName)
-        degrees = []  # MIDI note number
+        notes = []  # MIDI note number
         imagesCounter = 0
 
         if(cap.isOpened()):
@@ -348,9 +382,9 @@ class Generator:
             else:
                 if imagesCounter % everyNImages == 0:
                     averageColorChannel = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 4
-                    degrees.append(averageColorChannel)
+                    notes.append(averageColorChannel)
 
-        return degrees
+        return notes
 
     def __averageRGBChoiceOneFrame(self, frame, colorChannel, everyNPixels):
         """
@@ -382,7 +416,10 @@ class Generator:
 
     def videoCap(self, videoName):
         """
-        
+        Create a capture based on the given video name.
+        The video should be placed in the video folder in order to found.
+
+        videoName : the name of the video
         """
         cap = cv2.VideoCapture('Videos/' + videoName + '.avi')
         return cap
