@@ -151,6 +151,7 @@ class Generator:
         Create the midi file with the created tracks and write the resulting midi file in a folder.
 
         verbose : True if the info should be printed, False otherwise
+        Return : filepath of the mdi file
         """
         self.midi = MIDIFile(self.trackNb)
 
@@ -184,8 +185,10 @@ class Generator:
                     self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
                     time += noteDuration
 
-        with open('Sounds/' + self.videoName + '.mid', "wb") as output_file:
+        filepath = 'Sounds/' + self.videoName + '.mid'
+        with open(filepath, "wb") as output_file:
             self.midi.writeFile(output_file)
+        return filepath
 
     def random(self, tracks):
         start_time = time.clock()
