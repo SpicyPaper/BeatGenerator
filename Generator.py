@@ -5,6 +5,7 @@ import shutil
 import sys
 import time
 from collections import OrderedDict
+import math
 
 import cv2
 import numpy as np
@@ -414,17 +415,18 @@ class Generator:
 
         nbPixels = 0
         averageColor = 0
+        everyNPixels = int(math.sqrt(everyNPixels))
 
-        for x in range(0, dimX):
-            for y in range(0, dimY):
-                if (x * y) % everyNPixels == 0:
-                    nbPixels += 1
-                    averageColor += frame[x][y][colorChannel]
+        averageColor = cv2.mean(frame[:, :, colorChannel])
+        # for x in range(0, dimX, everyNPixels):
+        #     for y in range(0, dimY, everyNPixels):
+        #         averageColor += frame[x][y][colorChannel]
+        #         nbPixels += 1
 
         # [0 ; 255]
-        averageColor = int(averageColor / nbPixels)
+        # averageColor = int(averageColor / nbPixels)
 
-        return averageColor
+        return averageColor[0]
 
     def videoCap(self, videoName):
         """
