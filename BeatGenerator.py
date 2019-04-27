@@ -6,9 +6,9 @@ from addMp3ToAvi import addMp3ToAvi
 if __name__ == "__main__":
     
     
-    gen = Generator("Class_Room_Tour")
+    gen = Generator("Fond_Noir_Tissu_Cam_Fixe_2")
     gen.setTrackParams(3, 12)
     gen.averageRGB()
     gen.createMidi(True)
-    # gen.convertMdiToMp3()
-    # gen.addMp3ToAvi()
+    gen.convertMdiToMp3()
+    gen.addMp3ToAvi()

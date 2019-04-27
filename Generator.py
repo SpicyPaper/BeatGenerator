@@ -439,46 +439,66 @@ class Generator:
         return cap
 
     def convertMdiToMp3(self):
-        mdiName = self.midiPath.replace("/", "\\")
-        savePath = os.path.join(os.environ['USERPROFILE'], 'Desktop')
+        if self.midiPath == None:
+            print("Impossible to convert the midi file because it doesn't exist. Please call the createMidi() function before calling this one.")
+            return
+        try:
+            mdiName = self.midiPath.replace("/", "\\")
+            savePath = os.path.join(os.environ['USERPROFILE'], 'Desktop')
 
-        timeoutDelay = 60   # wait for 60 seconds
-        filename = os.path.splitext(os.path.basename(mdiName))[0] + ".mp3"
+            timeoutDelay = 60   # wait for 60 seconds
+            filename = os.path.splitext(os.path.basename(mdiName))[0] + ".mp3"
 
-        options = Options()
-        options.headless = True
+            options = Options()
+            options.headless = True
 
-        # Set firefox parameters to download easily the file
-        profile = webdriver.FirefoxProfile()
-        profile.set_preference("browser.download.folderList", 2)
-        profile.set_preference("browser.download.manager.showWhenStarting", False)
+            # Set firefox parameters to download easily the file
+            profile = webdriver.FirefoxProfile()
+            profile.set_preference("browser.download.folderList", 2)
+            profile.set_preference("browser.download.manager.showWhenStarting", False)
 
-        profile.set_preference("browser.download.dir", savePath)
-        profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
+            profile.set_preference("browser.download.dir", savePath)
+            profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
 
-        # Go to the site and download the file
-        driver = webdriver.Firefox(options=options, executable_path=r'geckodriver.exe', firefox_profile=profile)
-        driver.get('https://www.onlineconverter.com/midi-to-mp3')
-        driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
-        driver.find_element_by_id('convert-button').click()
+            # Go to the site and download the file
+            driver = webdriver.Firefox(options=options, executable_path=r'geckodriver.exe', firefox_profile=profile)
+            driver.get('https://www.onlineconverter.com/midi-to-mp3')
+            driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
+            driver.find_element_by_id('convert-button').click()
 
-        print("Converting the file...", flush=True)
-        # Wait until the file is downloaded
-        while not os.path.exists(os.path.join(savePath, filename)) and timeoutDelay > 0:
-            time.sleep(1)
-            timeoutDelay -= 1
+            print("Converting the midi file to mp3...", flush=True)
+            # Wait until the file is downloaded
+            while not os.path.exists(os.path.join(savePath, filename)) and timeoutDelay > 0:
+                time.sleep(1)
+                timeoutDelay -= 1
 
-        # Move the file to the current directory
-        movedPath = os.path.join(os.getcwd(), filename)
-        shutil.move(os.path.join(savePath, filename), movedPath)
+            if os.path.exists(os.path.join(savePath, filename)):
+                # Move the file to the current directory
+                movedPath = os.path.join(os.getcwd(), filename)
+                shutil.move(os.path.join(savePath, filename), movedPath)
 
-        self.mp3Path = os.path.basename(movedPath)
+                self.mp3Path = os.path.basename(movedPath)
+            else:
+                print("Could not convert the midi file to mp3")
+        except:
+            print("Impossible to connect to the site in order to convert the file. Make sure Firefox is installed.")
 
     def addMp3ToAvi(self):
-        inputs = OrderedDict([(self.videoPath, None), (self.mp3Path, None)])
-        outputs = {'output.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
-        ff = FFmpeg(executable=os.path.join(self.rootPath, 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
-        
-        ff.run()
+        if self.mp3Path == None:
+            print("Impossible to create the avi file because the mp3 file doesn't exist. Please call the convertMdiToMp3() function before calling this one.")
+            return
 
-        shutil.move(os.path.join(self.rootPath, 'output.avi'), os.path.join(self.rootPath, 'Outputs', 'output.avi'))
+        print("Creation of the video file...")
+
+        try:
+            inputs = OrderedDict([(self.videoPath, None), (self.mp3Path, None)])
+            outputs = {'output.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
+            ff = FFmpeg(executable=os.path.join(self.rootPath, 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
+            
+            ff.run()
+
+            shutil.move(os.path.join(self.rootPath, 'output.avi'), os.path.join(self.rootPath, 'Outputs', 'output.avi'))
+
+            print("Creation of the avi file complete. You can find it under the Outputs folder.")
+        except:
+            print("Error while creating the video")
