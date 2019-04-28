@@ -271,9 +271,9 @@ class Generator:
 
         cv2.imwrite("DiffImages/result" + str(imgCounter) + ".png", canvas)
 
-    def averageRGB(self, everyNPixels = 100):
+    def exemple(self, everyNPixels = 100):
         """
-        Create a track based on the track parameters and the average color of the video.
+        This method is an exemple
 
         everyNPixels : takes one pixel every N pixels
         """
@@ -291,7 +291,11 @@ class Generator:
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
-            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(frame, everyNPixels, currentTrack)
+        
+            # TODO : Prepare and give a normed value with your algo, based on one frame
+            normedValue = 0
+
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, normedValue)
         
         # For each frame in the video
         while(cap.isOpened()):
@@ -325,8 +329,14 @@ class Generator:
                             self.__resetTrackParams(self.num, self.instru, self.blocDuration)
                             ret, frame = cap.read()
                             imagesCounter += 1
-                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(frame, everyNPixels, currentTrack)
+        
+                            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
+                            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
+                            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+                            averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
 
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+        
         if len(notes) > 0:
             currentTrack.addBlocInfo(noteDuration, self.tempo)
             currentTrack.addNotes(notes)
@@ -334,22 +344,90 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def __averageRGBComputeTrack(self, frame, everyNPixels, currentTrack):
+    def averageRGB(self, everyNPixels = 100):
+        """
+        Create a track based on the track parameters and the average color of the video.
+
+        everyNPixels : takes one pixel every N pixels
+        """
+
+        # Init vars
+        cap = self.videoCap(self.videoName)
+        notes = []
+
+        imagesCounter = 0
+        imagesCounterTot = 0
+        notesCounter = 0
+        currentTrack = Track(None, None, None)
+
+        if(cap.isOpened()):
+            ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+        
+            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
+            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
+            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+            averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
+
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+        
+        # For each frame in the video
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+            self.__printProgress(imagesCounterTot, totNbImgInClip)
+
+            if frame is None:
+                break
+            else:
+                if imagesCounter % everyNImages == 0:
+                    averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
+                    averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
+                    averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+
+                    note = int((averageR + averageG + averageB) / 3 / 4)
+
+                    notesCounter += 1
+                    notes.append(currentTrack.createNoteVolTuple(note, self.volume))
+                
+                    # Test if one bloc can be done
+                    if notesCounter % notesNbPerBloc == 0:
+                        currentTrack.addBlocInfo(noteDuration, self.tempo)
+                        currentTrack.addNotes(notes)
+                        notes = []
+                        notesCounter = 0
+                        imagesCounter = 0
+
+                        if(cap.isOpened()):
+                            self.__resetTrackParams(self.num, self.instru, self.blocDuration)
+                            ret, frame = cap.read()
+                            imagesCounter += 1
+        
+                            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
+                            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
+                            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+                            averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
+
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+        
+        if len(notes) > 0:
+            currentTrack.addBlocInfo(noteDuration, self.tempo)
+            currentTrack.addNotes(notes)
+
+        self.tracks.append(currentTrack)
+        self.__resetTrackParams()
+
+    def __averageRGBComputeTrack(self, currentTrack, normedValue):
         """
         Update track parameters based on a frame of the video.
 
-        frame : a frame of the video
-        everyNPixels : takes one pixel every N pixels
         currentTrack : the track that should be update
+        normedValue : a normed value used to compute parameters [0 ; 1]
         """
-        
-        averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-        averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-        averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
 
-        averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
-
-        self.__computeTrackParams(averageRGBNorm)
+        self.__computeTrackParams(normedValue)
         currentTrack.num = self.num
         currentTrack.instru = self.instru
         currentTrack.blocDuration = self.blocDuration
