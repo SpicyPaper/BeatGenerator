@@ -1,12 +1,19 @@
 import argparse
+import os
 import random
+import shutil
 import sys
 import time
+from collections import OrderedDict
+import math
 
 import cv2
 import numpy as np
+from ffmpy import FFmpeg
 from midiutil import MIDIFile
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 
 from Track import Track
 
@@ -14,19 +21,23 @@ from Track import Track
 class Generator:
     
     def __init__(self, videoName):
+        
+        self.rootPath = os.path.dirname(sys.argv[0])
         self.result = []
         self.tracks = []
         self.lastTrackNum = 0
         self.trackNb = 5
         self.videoName = videoName
-        self.clip = VideoFileClip('Videos/' + videoName + '.avi')
+        self.videoPath = os.path.join(self.rootPath, 'Videos', self.videoName + '.avi')
+        self.clip = VideoFileClip(self.videoPath)
         self.num = None
         self.instru = None
         self.blocDuration = None
         self.tempo = None
         self.volume = None
         self.midi = None
-
+        self.midiPath = None
+        self.mp3Path = None
     def __printTitle(self, algoName):
         print("     ____             __     ______                           __            ")
         print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
@@ -185,10 +196,9 @@ class Generator:
                     self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
                     time += noteDuration
 
-        filepath = 'Sounds/' + self.videoName + '.mid'
-        with open(filepath, "wb") as output_file:
+        self.midiPath = os.path.join(self.rootPath, 'Sounds', self.videoName + '.mid')
+        with open(self.midiPath, "wb") as output_file:
             self.midi.writeFile(output_file)
-        return filepath
 
     def random(self, tracks):
         start_time = time.clock()
@@ -269,7 +279,7 @@ class Generator:
         canvas = np.zeros_like(frame, np.uint8)
         canvas[imask] = frame[imask]
 
-        cv2.imwrite("DiffImages/result" + str(imgCounter) + ".png", canvas)
+        cv2.imwrite(os.path.join(self.rootPath, "DiffImages", "result" + str(imgCounter) + ".png"), canvas)
 
     def exemple(self, everyNPixels = 100):
         """
@@ -483,17 +493,18 @@ class Generator:
 
         nbPixels = 0
         averageColor = 0
+        everyNPixels = int(math.sqrt(everyNPixels))
 
-        for x in range(0, dimX):
-            for y in range(0, dimY):
-                if (x * y) % everyNPixels == 0:
-                    nbPixels += 1
-                    averageColor += frame[x][y][colorChannel]
+        averageColor = cv2.mean(frame[:, :, colorChannel])
+        # for x in range(0, dimX, everyNPixels):
+        #     for y in range(0, dimY, everyNPixels):
+        #         averageColor += frame[x][y][colorChannel]
+        #         nbPixels += 1
 
         # [0 ; 255]
-        averageColor = int(averageColor / nbPixels)
+        # averageColor = int(averageColor / nbPixels)
 
-        return averageColor
+        return averageColor[0]
 
     def videoCap(self, videoName):
         """
@@ -502,5 +513,70 @@ class Generator:
 
         videoName : the name of the video
         """
-        cap = cv2.VideoCapture('Videos/' + videoName + '.avi')
+        cap = cv2.VideoCapture(self.videoPath)
         return cap
+
+    def convertMdiToMp3(self):
+        if self.midiPath == None:
+            print("Impossible to convert the midi file because it doesn't exist. Please call the createMidi() function before calling this one.")
+            return
+        try:
+            mdiName = self.midiPath.replace("/", "\\")
+            savePath = os.path.join(os.environ['USERPROFILE'], 'Desktop')
+
+            timeoutDelay = 60   # wait for 60 seconds
+            filename = os.path.splitext(os.path.basename(mdiName))[0] + ".mp3"
+
+            options = Options()
+            options.headless = True
+
+            # Set firefox parameters to download easily the file
+            profile = webdriver.FirefoxProfile()
+            profile.set_preference("browser.download.folderList", 2)
+            profile.set_preference("browser.download.manager.showWhenStarting", False)
+
+            profile.set_preference("browser.download.dir", savePath)
+            profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
+
+            # Go to the site and download the file
+            driver = webdriver.Firefox(options=options, executable_path=r'geckodriver.exe', firefox_profile=profile)
+            driver.get('https://www.onlineconverter.com/midi-to-mp3')
+            driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
+            driver.find_element_by_id('convert-button').click()
+
+            print("Converting the midi file to mp3...", flush=True)
+            # Wait until the file is downloaded
+            while not os.path.exists(os.path.join(savePath, filename)) and timeoutDelay > 0:
+                time.sleep(1)
+                timeoutDelay -= 1
+
+            if os.path.exists(os.path.join(savePath, filename)):
+                # Move the file to the current directory
+                movedPath = os.path.join(os.getcwd(), filename)
+                shutil.move(os.path.join(savePath, filename), movedPath)
+
+                self.mp3Path = os.path.basename(movedPath)
+            else:
+                print("Could not convert the midi file to mp3")
+        except:
+            print("Impossible to connect to the site in order to convert the file. Make sure Firefox is installed.")
+
+    def addMp3ToAvi(self):
+        if self.mp3Path == None:
+            print("Impossible to create the avi file because the mp3 file doesn't exist. Please call the convertMdiToMp3() function before calling this one.")
+            return
+
+        print("Creation of the video file...")
+
+        try:
+            inputs = OrderedDict([(self.videoPath, None), (self.mp3Path, None)])
+            outputs = {'output.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
+            ff = FFmpeg(executable=os.path.join(self.rootPath, 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
+            
+            ff.run()
+
+            shutil.move(os.path.join(self.rootPath, 'output.avi'), os.path.join(self.rootPath, 'Outputs', 'output.avi'))
+
+            print("Creation of the avi file complete. You can find it under the Outputs folder.")
+        except:
+            print("Error while creating the video")
