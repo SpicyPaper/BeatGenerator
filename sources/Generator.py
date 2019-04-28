@@ -441,36 +441,71 @@ class Generator:
 
         return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack
 
-    def averageRGBChannel(self, videoName, everyNPixels, everyNImages, colorChannel):
+    def averageRGBChannel(self, colorChannel, everyNPixels = 100):
         """
-        Return all notes compute based on average red, green
-        or blue channel of a given video
+        Create a track based on the track parameters and the average red, green or blue color of the video.
 
-        videoName :         the video file name without extension
-        everyNPixels :      take only n pixels of the image
-        everyNImages :      take only n images of the video
+        everyNPixels :      takes one pixel every N pixels
         colorChannel :      0 = red, 1 = green, 2 = blue
         """
 
-        cap = self.videoCap(videoName)
-        notes = []  # MIDI note number
+        # Init vars
+        cap = self.videoCap(self.videoName)
+        notes = []
+
         imagesCounter = 0
+        imagesCounterTot = 0
+        notesCounter = 0
+        currentTrack = Track(None, None, None)
 
         if(cap.isOpened()):
             ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+
+            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 255
+            
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageChannelNorm)
         
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
+            imagesCounterTot += 1
             imagesCounter += 1
+            self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
             else:
                 if imagesCounter % everyNImages == 0:
-                    averageColorChannel = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 4
-                    notes.append(averageColorChannel)
+                    note = int(self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 4)
 
-        return notes
+                    notesCounter += 1
+                    notes.append(currentTrack.createNoteVolTuple(note, self.volume))
+                
+                    # Test if one bloc can be done
+                    if notesCounter % notesNbPerBloc == 0:
+                        currentTrack.addBlocInfo(noteDuration, self.tempo)
+                        currentTrack.addNotes(notes)
+                        notes = []
+                        notesCounter = 0
+                        imagesCounter = 0
+
+                        if(cap.isOpened()):
+                            self.__resetTrackParams(self.num, self.instru, self.blocDuration)
+                            ret, frame = cap.read()
+                            imagesCounter += 1
+                            
+                            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 255
+
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageChannelNorm)
+        
+        if len(notes) > 0:
+            currentTrack.addBlocInfo(noteDuration, self.tempo)
+            currentTrack.addNotes(notes)
+
+        self.tracks.append(currentTrack)
+        self.__resetTrackParams()
 
     def __averageRGBChoiceOneFrame(self, frame, colorChannel, everyNPixels):
         """
