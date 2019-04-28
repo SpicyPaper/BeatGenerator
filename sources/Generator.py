@@ -22,13 +22,14 @@ class Generator:
     
     def __init__(self, videoName):
         
-        self.rootPath = os.path.dirname(sys.argv[0])
+        self.rootPath = os.getcwd()
+        print(os.getcwd())
         self.result = []
         self.tracks = []
         self.lastTrackNum = 0
         self.trackNb = 5
         self.videoName = videoName
-        self.videoPath = os.path.join(self.rootPath, 'Videos', self.videoName + '.avi')
+        self.videoPath = os.path.join(self.rootPath, 'videos', self.videoName + '.avi')
         self.clip = VideoFileClip(self.videoPath)
         self.num = None
         self.instru = None
@@ -196,7 +197,7 @@ class Generator:
                     self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
                     time += noteDuration
 
-        self.midiPath = os.path.join(self.rootPath, 'Sounds', self.videoName + '.mid')
+        self.midiPath = os.path.join(self.rootPath, 'sounds', self.videoName + '.mid')
         with open(self.midiPath, "wb") as output_file:
             self.midi.writeFile(output_file)
 
@@ -279,7 +280,7 @@ class Generator:
         canvas = np.zeros_like(frame, np.uint8)
         canvas[imask] = frame[imask]
 
-        cv2.imwrite(os.path.join(self.rootPath, "DiffImages", "result" + str(imgCounter) + ".png"), canvas)
+        cv2.imwrite(os.path.join(self.rootPath, "temp", "diffImages", "result" + str(imgCounter) + ".png"), canvas)
 
     def exemple(self, everyNPixels = 100):
         """
@@ -531,7 +532,8 @@ class Generator:
             profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
 
             # Go to the site and download the file
-            driver = webdriver.Firefox(options=options, executable_path=r'geckodriver.exe', firefox_profile=profile)
+            geckodriverPath = os.path.join(self.rootPath, "libs", "geckodriver", "geckodriver.exe")
+            driver = webdriver.Firefox(options=options, executable_path=geckodriverPath, firefox_profile=profile)
             driver.get('https://www.onlineconverter.com/midi-to-mp3')
             driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
             driver.find_element_by_id('convert-button').click()
@@ -544,10 +546,10 @@ class Generator:
 
             if os.path.exists(os.path.join(savePath, filename)):
                 # Move the file to the current directory
-                movedPath = os.path.join(os.getcwd(), "Sounds", filename)
+                movedPath = os.path.join(os.getcwd(), "sounds", filename)
                 shutil.move(os.path.join(savePath, filename), movedPath)
 
-                self.mp3Path = os.path.basename(movedPath)
+                self.mp3Path = movedPath
             else:
                 print("Could not convert the midi file to mp3")
         except:
@@ -563,12 +565,12 @@ class Generator:
         try:
             inputs = OrderedDict([(self.videoPath, None), (self.mp3Path, None)])
             outputs = {self.videoName + '.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
-            ff = FFmpeg(executable=os.path.join(self.rootPath, 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
+            ff = FFmpeg(executable=os.path.join(self.rootPath, 'libs', 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
             
             ff.run()
 
-            shutil.move(os.path.join(self.rootPath, self.videoName + '.avi'), os.path.join(self.rootPath, 'Outputs', self.videoName + '.avi'))
+            shutil.move(os.path.join(self.rootPath, self.videoName + '.avi'), os.path.join(self.rootPath, 'outputs', self.videoName + '.avi'))
 
-            print("Creation of the avi file complete. You can find it under the Outputs folder.")
+            print("Creation of the avi file complete. You can find it under the outputs folder.")
         except:
             print("Error while creating the video")
