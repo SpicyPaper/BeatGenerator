@@ -23,7 +23,6 @@ class Generator:
     def __init__(self, videoName):
         
         self.rootPath = os.getcwd()
-        print(os.getcwd())
         self.result = []
         self.tracks = []
         self.lastTrackNum = 0
@@ -307,7 +306,7 @@ class Generator:
             # TODO : Prepare and give a normed value with your algo, based on one frame
             normedValue = 0
 
-            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, normedValue)
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
         # For each frame in the video
         while(cap.isOpened()):
@@ -342,7 +341,7 @@ class Generator:
                             # TODO : Prepare and give a normed value with your algo, based on one frame - could be computed like the previous one
                             normedValue = 0
 
-                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, normedValue)
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
         if len(notes) > 0:
             currentTrack.addBlocInfo(noteDuration, self.tempo)
@@ -377,7 +376,7 @@ class Generator:
             averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
             averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
 
-            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageRGBNorm)
         
         # For each frame in the video
         while(cap.isOpened()):
@@ -416,7 +415,7 @@ class Generator:
                             averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
                             averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
 
-                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageRGBNorm)
         
         if len(notes) > 0:
             currentTrack.addBlocInfo(noteDuration, self.tempo)
@@ -425,7 +424,7 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def __averageRGBComputeTrack(self, currentTrack, normedValue):
+    def __computeTrack(self, currentTrack, normedValue):
         """
         Update track parameters based on a frame of the video.
 
@@ -530,7 +529,7 @@ class Generator:
             geckodriverPath = os.path.join(self.rootPath, "libs", "geckodriver", "geckodriver.exe")
             driver = webdriver.Firefox(options=options, executable_path=geckodriverPath, firefox_profile=profile)
             driver.get('https://www.onlineconverter.com/midi-to-mp3')
-            driver.find_element_by_id("file").send_keys(os.path.join(os.getcwd(), mdiName))
+            driver.find_element_by_id("file").send_keys(os.path.join(self.rootPath, mdiName))
             driver.find_element_by_id('convert-button').click()
 
             print("Converting the midi file to mp3...", flush=True)
@@ -541,7 +540,7 @@ class Generator:
 
             if os.path.exists(os.path.join(savePath, filename)):
                 # Move the file to the current directory
-                movedPath = os.path.join(os.getcwd(), "sounds", filename)
+                movedPath = os.path.join(self.rootPath, "sounds", filename)
                 shutil.move(os.path.join(savePath, filename), movedPath)
 
                 self.mp3Path = movedPath
