@@ -122,3 +122,4 @@ dmypy.json
 # Music File
 *.mid
 \.vscode/
+*.mp3
