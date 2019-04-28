@@ -491,18 +491,10 @@ class Generator:
         dimX = vect[0]
         dimY = vect[1]
 
-        nbPixels = 0
         averageColor = 0
         everyNPixels = int(math.sqrt(everyNPixels))
 
         averageColor = cv2.mean(frame[:, :, colorChannel])
-        # for x in range(0, dimX, everyNPixels):
-        #     for y in range(0, dimY, everyNPixels):
-        #         averageColor += frame[x][y][colorChannel]
-        #         nbPixels += 1
-
-        # [0 ; 255]
-        # averageColor = int(averageColor / nbPixels)
 
         return averageColor[0]
 
@@ -552,7 +544,7 @@ class Generator:
 
             if os.path.exists(os.path.join(savePath, filename)):
                 # Move the file to the current directory
-                movedPath = os.path.join(os.getcwd(), filename)
+                movedPath = os.path.join(os.getcwd(), "Sounds", filename)
                 shutil.move(os.path.join(savePath, filename), movedPath)
 
                 self.mp3Path = os.path.basename(movedPath)
@@ -570,12 +562,12 @@ class Generator:
 
         try:
             inputs = OrderedDict([(self.videoPath, None), (self.mp3Path, None)])
-            outputs = {'output.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
+            outputs = {self.videoName + '.avi': '-hide_banner -loglevel panic -map 0:v -map 1:a -c copy -shortest -y'}
             ff = FFmpeg(executable=os.path.join(self.rootPath, 'ffmpeg', 'bin', 'ffmpeg.exe'), inputs=inputs, outputs=outputs)
             
             ff.run()
 
-            shutil.move(os.path.join(self.rootPath, 'output.avi'), os.path.join(self.rootPath, 'Outputs', 'output.avi'))
+            shutil.move(os.path.join(self.rootPath, self.videoName + '.avi'), os.path.join(self.rootPath, 'Outputs', self.videoName + '.avi'))
 
             print("Creation of the avi file complete. You can find it under the Outputs folder.")
         except:
