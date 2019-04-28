@@ -515,7 +515,7 @@ class Generator:
             return
         try:
             mdiName = self.midiPath.replace("/", "\\")
-            savePath = os.path.join(os.environ['USERPROFILE'], 'Desktop')
+            savePath = os.path.join(self.rootPath, "sounds")
 
             timeoutDelay = 60   # wait for 60 seconds
             filename = os.path.splitext(os.path.basename(mdiName))[0] + ".mp3"
@@ -546,10 +546,10 @@ class Generator:
 
             if os.path.exists(os.path.join(savePath, filename)):
                 # Move the file to the current directory
-                movedPath = os.path.join(os.getcwd(), "sounds", filename)
-                shutil.move(os.path.join(savePath, filename), movedPath)
+                # movedPath = os.path.join(os.getcwd(), "sounds", filename)
+                # shutil.move(os.path.join(savePath, filename), movedPath)
 
-                self.mp3Path = movedPath
+                self.mp3Path = os.path.join(savePath, filename)
             else:
                 print("Could not convert the midi file to mp3")
         except:
@@ -559,6 +559,8 @@ class Generator:
         if self.mp3Path == None:
             print("Impossible to create the avi file because the mp3 file doesn't exist. Please call the convertMdiToMp3() function before calling this one.")
             return
+
+        input("Press Enter when the mp3 file has been copied to the sounds folder...")
 
         print("Creation of the video file...")
 
@@ -572,5 +574,6 @@ class Generator:
             shutil.move(os.path.join(self.rootPath, self.videoName + '.avi'), os.path.join(self.rootPath, 'outputs', self.videoName + '.avi'))
 
             print("Creation of the avi file complete. You can find it under the outputs folder.")
-        except:
-            print("Error while creating the video")
+        except Exception as e: 
+            print(e)
+            # print("Error while creating the video")
