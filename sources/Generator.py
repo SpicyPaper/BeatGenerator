@@ -39,6 +39,7 @@ class Generator:
         self.midi = None
         self.midiPath = None
         self.mp3Path = None
+
     def __printTitle(self, algoName):
         print("     ____             __     ______                           __            ")
         print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
@@ -319,11 +320,8 @@ class Generator:
                 break
             else:
                 if imagesCounter % everyNImages == 0:
-                    averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-                    averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-                    averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
-
-                    note = int((averageR + averageG + averageB) / 3 / 4)
+                    # TODO : Prepare and give a note, the value of the note should be an int and between [0 ; ~60-70]
+                    note = 64
 
                     notesCounter += 1
                     notes.append(currentTrack.createNoteVolTuple(note, self.volume))
@@ -340,13 +338,11 @@ class Generator:
                             self.__resetTrackParams(self.num, self.instru, self.blocDuration)
                             ret, frame = cap.read()
                             imagesCounter += 1
-        
-                            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-                            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-                            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
-                            averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
+                            
+                            # TODO : Prepare and give a normed value with your algo, based on one frame - could be computed like the previous one
+                            normedValue = 0
 
-                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, averageRGBNorm)
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__averageRGBComputeTrack(currentTrack, normedValue)
         
         if len(notes) > 0:
             currentTrack.addBlocInfo(noteDuration, self.tempo)
@@ -397,7 +393,6 @@ class Generator:
                     averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
                     averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
                     averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
-
                     note = int((averageR + averageG + averageB) / 3 / 4)
 
                     notesCounter += 1
