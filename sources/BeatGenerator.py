@@ -10,6 +10,8 @@ if __name__ == "__main__":
     gen.setTrackParams(3)
     gen.averageRGB()
     gen.setTrackParams(3)
+    gen.diffBetween2Images(100)
+    gen.setTrackParams(3)
     gen.averageRGBChannel(0)
     gen.setTrackParams(3)
     gen.averageRGBChannel(1)

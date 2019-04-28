@@ -115,19 +115,36 @@ class Generator:
                 print("Their is no more available tracks, increase the number of track!")
             else:
                 self.num = self.lastTrackNum
-                self.lastTrackNum
+                self.lastTrackNum += 1
 
         if self.instru == None:
-            self.instru = int(usedNormedValue * 127)
+            self.instru = int(usedNormedValue * 126) + 1
 
         if self.blocDuration == None:
             self.blocDuration = blocDuration
 
         if self.tempo == None:
-            self.tempo = int(usedNormedValue * 180)
+            self.tempo = int(usedNormedValue * 180) + 1
 
         if self.volume == None:
             self.volume = volume
+
+    def __computeTrack(self, currentTrack, normedValue):
+        """
+        Update track parameters based on a frame of the video.
+
+        currentTrack : the track that should be update
+        normedValue : a normed value used to compute parameters [0 ; 1]
+        """
+
+        self.__computeTrackParams(normedValue)
+        currentTrack.num = self.num
+        currentTrack.instru = self.instru
+        currentTrack.blocDuration = self.blocDuration
+
+        notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages = self.__computeTrackInfo(currentTrack)
+
+        return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack
 
     def __resetTrackParams(self, num = None, instru = None, blocDuration = None, tempo = None, volume = None):
         """
@@ -214,42 +231,91 @@ class Generator:
             self.__printProgress(i + 1, tracks)
         self.__printResult(time.clock() - start_time)
 
-    def diffBetween2Images(self, videoName, maxSound, factor, everyNImages, th):
+    def diffBetween2Images(self, factor, th = 127, maxNote = 64, everyNPixels = 100):
         """
-        Return all notes compute based on the diff between
-        2 consecutives frame of the video
+        Create a track based on the track parameters and the differences between two consecutives frame of the video.
 
-        videoName :     the video file name without extension
-        maxSound :      max value that can be returned for a sound
-        factor :        applied on the note, should be big if the video
-                            is quiet, should be low if the video is agitated
-        everyNImages :  take only n images of the video
+        factor :        applied on the note, should be big if the video is generaly quiet,
+                            should be low if the video is generaly agitated
         th :            the threshold [0 ; 255]
+        maxNote :       max value that can be returned for a note
+        everyNPixels :  takes one pixel every N pixels
         """
-        cap = self.videoCap(videoName)
-        notes = []  # MIDI note number
-        counter = 0
+
+        # Init vars
+        cap = self.videoCap(self.videoName)
+        notes = []
+
+        imagesCounter = 0
+        imagesCounterTot = 0
+        notesCounter = 0
+        currentTrack = Track(None, None, None)
+
         previousNbOfDiff = -1
 
         if(cap.isOpened()):
             ret, frame = cap.read()
+
+            if(cap.isOpened()):
+                previousFrame = frame
+                ret, frame = cap.read()
+            
+                previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
+
+                if(cap.isOpened()):
+                    previousFrame = frame
+                    ret, frame = cap.read()
+                    imagesCounterTot += 3
+                    imagesCounter += 3
+
+                    previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
+                    normedValue = note / maxNote
+
+                    notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
+        # For each frame in the video
         while(cap.isOpened()):
-            previousFrame = frame
             ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+            self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
             else:
-                if counter % everyNImages == 0:
-                    previousNbOfDiff, sound = self.__diffBetween2Images(maxSound, factor, previousNbOfDiff, previousFrame, frame, th)
-                    if sound != -1:
-                        notes.append(sound)
-                counter += 1
+                if imagesCounter % everyNImages == 0:
 
-        return notes
+                    previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
 
-    def __diffBetween2Images(self, maxSound, factor, previousNbOfDiff, previousFrame, frame, th):
+                    notesCounter += 1
+                    notes.append(currentTrack.createNoteVolTuple(note, self.volume))
+                
+                    # Test if one bloc can be done
+                    if notesCounter % notesNbPerBloc == 0:
+                        currentTrack.addBlocInfo(noteDuration, self.tempo)
+                        currentTrack.addNotes(notes)
+                        notes = []
+                        notesCounter = 0
+                        imagesCounter = 0
+
+                        if(cap.isOpened()):
+                            self.__resetTrackParams(self.num, self.instru, self.blocDuration)
+                            ret, frame = cap.read()
+                            imagesCounter += 1
+                            
+                            previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
+                            normedValue = note / maxNote
+
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
+        
+        if len(notes) > 0:
+            currentTrack.addBlocInfo(noteDuration, self.tempo)
+            currentTrack.addNotes(notes)
+
+        self.tracks.append(currentTrack)
+        self.__resetTrackParams()
+
+    def __diffBetween2Images(self, maxNote, factor, previousNbOfDiff, previousFrame, frame, th):
         
         diff = cv2.absdiff(previousFrame, frame)
         mask = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
@@ -263,10 +329,10 @@ class Generator:
             frameSize = np.sum(np.ones_like(frame, np.uint8))
             diffBetweenDiff = np.absolute(nbOfDiff - previousNbOfDiff)
             
-            sound = int(diffBetweenDiff / frameSize * maxSound * factor)
+            sound = int(diffBetweenDiff / frameSize * maxNote * factor)
 
-            if sound > maxSound:
-                sound = maxSound
+            if sound > maxNote:
+                sound = maxNote
 
             return np.sum(imask), sound
 
@@ -423,23 +489,6 @@ class Generator:
 
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
-
-    def __computeTrack(self, currentTrack, normedValue):
-        """
-        Update track parameters based on a frame of the video.
-
-        currentTrack : the track that should be update
-        normedValue : a normed value used to compute parameters [0 ; 1]
-        """
-
-        self.__computeTrackParams(normedValue)
-        currentTrack.num = self.num
-        currentTrack.instru = self.instru
-        currentTrack.blocDuration = self.blocDuration
-
-        notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages = self.__computeTrackInfo(currentTrack)
-
-        return notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack
 
     def averageRGBChannel(self, colorChannel, everyNPixels = 100):
         """
