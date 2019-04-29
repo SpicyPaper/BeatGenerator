@@ -21,14 +21,13 @@ from Track import Track
 class Generator:
     
     def __init__(self, videoName):
-        
         self.rootPath = os.getcwd()
         self.result = []
         self.tracks = []
         self.lastTrackNum = 0
         self.trackNb = 5
         self.videoName = videoName
-        self.videoPath = os.path.join(self.rootPath, 'videos', self.videoName + '.avi')
+        self.videoPath = os.path.join(self.rootPath, 'Videos', self.videoName + '.avi')
         self.clip = VideoFileClip(self.videoPath)
         self.num = None
         self.instru = None
@@ -349,6 +348,90 @@ class Generator:
 
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
+
+    def convolution(self, everyNPixels = 100, kernel = [[0, 0, 0],[0, 1, 0],[0, 0, 0]]):
+        """
+        This method is an exemple
+
+        everyNPixels : takes one pixel every N pixels
+        """
+
+        # Init vars
+        cap = self.videoCap(self.videoName)
+        notes = []
+
+        imagesCounter = 0
+        imagesCounterTot = 0
+        notesCounter = 0
+        currentTrack = Track(None, None, None)
+
+        if(cap.isOpened()):
+            ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+        
+             # Implementation
+            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 60
+
+            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
+        
+        # For each frame in the video
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+            imagesCounterTot += 1
+            imagesCounter += 1
+            self.__printProgress(imagesCounterTot, totNbImgInClip)
+
+            if frame is None:
+                break
+            else:
+                if imagesCounter % everyNImages == 0:
+                    # Implementation
+                    note = self.__applyKernelToFrame(frame, everyNPixels, kernel)
+
+                    notesCounter += 1
+                    notes.append(currentTrack.createNoteVolTuple(note, self.volume))
+                
+                    # Test if one bloc can be done
+                    if notesCounter % notesNbPerBloc == 0:
+                        currentTrack.addBlocInfo(noteDuration, self.tempo)
+                        currentTrack.addNotes(notes)
+                        notes = []
+                        notesCounter = 0
+                        imagesCounter = 0
+
+                        if(cap.isOpened()):
+                            self.__resetTrackParams(self.num, self.instru, self.blocDuration)
+                            ret, frame = cap.read()
+                            imagesCounter += 1
+                            
+                             # Implementation
+                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 60
+
+                            notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
+        
+        if len(notes) > 0:
+            currentTrack.addBlocInfo(noteDuration, self.tempo)
+            currentTrack.addNotes(notes)
+
+        self.tracks.append(currentTrack)
+        self.__resetTrackParams()
+
+    def __applyKernelToFrame(self, frame, everyNPixels, kernel):
+        kernelRadius = int(len(kernel) / 2)
+        frameW = int(len(frame) / everyNPixels)
+        frameH = int(len(frame[0]) / everyNPixels)
+        result = 0
+
+        for i in range(kernelRadius, frameW - kernelRadius):
+            for j in range(kernelRadius, frameW - kernelRadius):
+                sum = 0
+                for m in range(-kernelRadius, kernelRadius):
+                    for n in range(-kernelRadius, kernelRadius):
+                        sum += frame[i + m][j + n] * kernel[m + kernelRadius + 1][n + kernelRadius + 1]
+                result += int((sum[0] + sum[1] + sum[2]) / 3)
+        n = frameW * frameH;
+        return int(result / n) + 40;
 
     def averageRGB(self, everyNPixels = 100):
         """
