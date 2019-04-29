@@ -6,6 +6,7 @@ import sys
 import time
 from collections import OrderedDict
 import math
+import tqdm
 
 import cv2
 import numpy as np
@@ -220,14 +221,14 @@ class Generator:
     def random(self, tracks):
         start_time = time.clock()
         self.__printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
-        for i in range(tracks):
+        for i in tqdm(range(tracks)):
             track = i
             tempo = random.randint(30, 100)
             notes = []
             for j in range (self.__getNumberNotes(self.clip.duration, tempo)):
                 notes.append(random.randint(30, 60))
             self.result.append((track, tempo, notes))
-            self.__printProgress(i + 1, tracks)
+            # self.__printProgress(i + 1, tracks)
         self.__printResult(time.clock() - start_time)
 
     def diffBetween2Images(self, factor, th = 127, maxNote = 64, everyNPixels = 100):
