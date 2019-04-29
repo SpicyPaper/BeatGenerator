@@ -231,7 +231,7 @@ class Generator:
             # self.__printProgress(i + 1, tracks)
         self.__printResult(time.clock() - start_time)
 
-    def diffBetween2Images(self, factor, th = 127, maxNote = 64, everyNPixels = 100):
+    def diffBetween2Images(self, factor, th = 127, maxNote = 64):
         """
         Create a track based on the track parameters and the differences between two consecutives frame of the video.
 
@@ -239,7 +239,6 @@ class Generator:
                             should be low if the video is generaly agitated
         th :            the threshold [0 ; 255]
         maxNote :       max value that can be returned for a note
-        everyNPixels :  takes one pixel every N pixels
         """
 
         # Init vars
@@ -329,12 +328,12 @@ class Generator:
             frameSize = np.sum(np.ones_like(frame, np.uint8))
             diffBetweenDiff = np.absolute(nbOfDiff - previousNbOfDiff)
             
-            sound = int(diffBetweenDiff / frameSize * maxNote * factor)
+            note = int(diffBetweenDiff / frameSize * maxNote * factor)
 
-            if sound > maxNote:
-                sound = maxNote
+            if note > maxNote:
+                note = maxNote
 
-            return np.sum(imask), sound
+            return np.sum(imask), note
 
     def __diffBetween2Images_display(self, previousFrame, frame, th, imgCounter):
         
@@ -642,7 +641,7 @@ class Generator:
 
     def __averageRGBChoiceOneFrame(self, frame, colorChannel, everyNPixels):
         """
-        Compute a sound between [0 ; 255] based on the average of
+        Compute a note between [0 ; 255] based on the average of
         red, green or blue in a given frame.
 
         frame :             the images
