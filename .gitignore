@@ -123,3 +123,5 @@ dmypy.json
 *.mid
 \.vscode/
 *.mp3
+
+*.png
