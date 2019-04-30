@@ -39,14 +39,14 @@ class Generator:
         self.midiPath = None
         self.mp3Path = None
 
-    def __printTitle(self, algoName):
+    def printTitle(self):
         print("     ____             __     ______                           __            ")
         print("    / __ )___  ____ _/ /_   / ____/__  ____  ___  _________ _/ /_____  _____")
         print("   / __  / _ \/ __ `/ __/  / / __/ _ \/ __ \/ _ \/ ___/ __ `/ __/ __ \/ ___/")
         print("  / /_/ /  __/ /_/ / /_   / /_/ /  __/ / / /  __/ /  / /_/ / /_/ /_/ / /    ")
         print(" /_____/\___/\__,_/\__/   \____/\___/_/ /_/\___/_/   \__,_/\__/\____/_/     ")
         print("\n                                                 Traitement d'image - 2019")
-        print("\n  Using:", algoName)
+        print("\n  Progress:")
 
     def __printProgress(self, current, max):
         progress = int(100 * current / max)
@@ -417,12 +417,14 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def convolution(self, everyNPixels = 100, kernel = [[0, 0, 0],[0, 1, 0],[0, 0, 0]]):
+    def convolution(self, factor, everyNPixels = 100, kernel = [[0, 0, 0],[0, 1, 0],[0, 0, 0]]):
         """
         This method is an exemple
 
-        everyNPixels : takes one pixel every N pixels
-        kernel : 2D array specifying the kernel to apply on every frames
+        factor :        applied on the note, should be big if the video is generaly smooth,
+                            should be low if the video is generaly edgy
+        everyNPixels :  takes one pixel every N pixels
+        kernel :        2D array specifying the kernel to apply on every frames
         """
 
         # Init vars
@@ -440,7 +442,7 @@ class Generator:
             imagesCounter += 1
         
              # Implementation
-            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 255
+            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 255
 
             if normedValue > 1:
                 normedValue = 1
@@ -461,7 +463,7 @@ class Generator:
             else:
                 if imagesCounter % everyNImages == 0:
                     # Implementation
-                    note = int(self.__applyKernelToFrame(frame, everyNPixels, kernel) / 4)
+                    note = int(self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 4)
 
                     notesCounter += 1
                     notes.append(currentTrack.createNoteVolTuple(note, self.volume))
@@ -480,7 +482,7 @@ class Generator:
                             imagesCounter += 1
                             
                              # Implementation
-                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 255
+                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 255
 
                             if normedValue > 1:
                                 normedValue = 1
@@ -496,7 +498,7 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def __applyKernelToFrame(self, frame, everyNPixels, kernel):
+    def __applyKernelToFrame(self, frame, everyNPixels, kernel, factor):
         kernelRadius = int(len(kernel) / 2)
         frameW = int(len(frame) / everyNPixels)
         frameH = int(len(frame[0]) / everyNPixels)
@@ -509,8 +511,8 @@ class Generator:
                     for n in range(-kernelRadius, kernelRadius):
                         sum += frame[i + m][j + n] * kernel[m + kernelRadius + 1][n + kernelRadius + 1]
                 result += int((sum[0] + sum[1] + sum[2]) / 3)
-        n = frameW * frameH;
-        return int(result / n) + 40;
+        n = frameW * frameH
+        return int((result * factor) / n)
 
     def averageRGB(self, everyNPixels = 100):
         """
@@ -591,7 +593,7 @@ class Generator:
         Create a track based on the track parameters and the average red, green or blue color of the video.
 
         everyNPixels :      takes one pixel every N pixels
-        colorChannel :      0 = red, 1 = green, 2 = blue
+        colorChannel :      0 = blue, 1 = green, 2 = red
         """
 
         # Init vars
