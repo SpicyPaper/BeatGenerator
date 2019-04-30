@@ -422,6 +422,7 @@ class Generator:
         This method is an exemple
 
         everyNPixels : takes one pixel every N pixels
+        kernel : 2D array specifying the kernel to apply on every frames
         """
 
         # Init vars
@@ -439,7 +440,12 @@ class Generator:
             imagesCounter += 1
         
              # Implementation
-            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 60
+            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 255
+
+            if normedValue > 1:
+                normedValue = 1
+            if normedValue < 0:
+                normedValue = 0
 
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
@@ -455,7 +461,7 @@ class Generator:
             else:
                 if imagesCounter % everyNImages == 0:
                     # Implementation
-                    note = self.__applyKernelToFrame(frame, everyNPixels, kernel)
+                    note = int(self.__applyKernelToFrame(frame, everyNPixels, kernel) / 4)
 
                     notesCounter += 1
                     notes.append(currentTrack.createNoteVolTuple(note, self.volume))
@@ -474,7 +480,12 @@ class Generator:
                             imagesCounter += 1
                             
                              # Implementation
-                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 60
+                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel) / 255
+
+                            if normedValue > 1:
+                                normedValue = 1
+                            if normedValue < 0:
+                                normedValue = 0
 
                             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
