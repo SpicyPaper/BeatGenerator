@@ -707,6 +707,10 @@ class Generator:
             profile.set_preference("browser.download.dir", savePath)
             profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "audio/mpeg")
 
+            # Check if the file already exist, if so, remove it
+            if os.path.exists(os.path.join(savePath, filename)):
+                os.remove(os.path.join(savePath, filename))
+
             # Go to the site and download the file
             geckodriverPath = os.path.join(self.rootPath, "libs", "geckodriver", "geckodriver.exe")
             driver = webdriver.Firefox(options=options, executable_path=geckodriverPath, firefox_profile=profile)
