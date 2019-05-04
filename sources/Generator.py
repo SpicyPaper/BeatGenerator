@@ -283,8 +283,8 @@ class Generator:
                 break
             else:
                 if imagesCounter % everyNImages == 0:
-
-                    self.__diffBetween2Images_display(previousFrame, frame, th, imagesCounterTot)
+                    # Uncomment line bellow to create image
+                    #self.__diffBetween2Images_display(previousFrame, frame, th, imagesCounterTot)
                     previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
 
                     notesCounter += 1

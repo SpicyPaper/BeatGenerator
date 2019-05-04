@@ -1,0 +1,1 @@
+The initial videos used in our algo should be placed here
