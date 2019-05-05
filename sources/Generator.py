@@ -163,17 +163,23 @@ class Generator:
         self.tempo = tempo
         self.volume = volume
 
-    def setTrackParams(self, blocDuration, instru = None, trackNb = 5):
+    def setTrackNb(self, trackNb):
+        """
+        Set the number of track
+
+        trackNb : The number of track
+        """
+        self.trackNb = trackNb
+
+    def setTrackParams(self, blocDuration, instru = None):
         """
         Set some of the track parameters.
 
         blocDuration : the duration of each bloc of notes
         instru : the instrument that will play the notes
-        trackNb : the number of available tracks
         """
         self.blocDuration = blocDuration
         self.instru = instru
-        self.trackNb = trackNb
 
     def createMidi(self, verbose = False):
         """
