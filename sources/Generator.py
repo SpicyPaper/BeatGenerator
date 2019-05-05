@@ -355,11 +355,12 @@ class Generator:
 
         cv2.imwrite(os.path.join(self.rootPath, "temp", "diffImages", "result" + str(imgCounter) + ".png"), canvas)
 
-    def exemple(self, everyNPixels = 100):
+    def exemple(self, reduceFrameBy = 100):
         """
         This method is an exemple
 
-        everyNPixels : takes one pixel every N pixels
+        reduceFrameBy :  reduce every frame of the video, if the frame is 1000x1000
+                            the resulting frame will be 10x10
         """
 
         # Init vars
@@ -423,13 +424,14 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def convolution(self, factor, everyNPixels = 100, kernel = [[0, 0, 0],[0, 1, 0],[0, 0, 0]]):
+    def convolution(self, factor, reduceFrameBy = 100, kernel = [[0, 0, 0],[0, 1, 0],[0, 0, 0]]):
         """
         This method is an exemple
 
         factor :        applied on the note, should be big if the video is generaly smooth,
                             should be low if the video is generaly edgy
-        everyNPixels :  takes one pixel every N pixels
+        reduceFrameBy :  reduce every frame of the video, if the frame is 1000x1000
+                            the resulting frame will be 10x10
         kernel :        2D array specifying the kernel to apply on every frames
         """
 
@@ -448,7 +450,7 @@ class Generator:
             imagesCounter += 1
         
              # Implementation
-            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 255
+            normedValue = self.__applyKernelToFrame(frame, reduceFrameBy, kernel, factor) / 255
 
             if normedValue > 1:
                 normedValue = 1
@@ -469,7 +471,7 @@ class Generator:
             else:
                 if imagesCounter % everyNImages == 0:
                     # Implementation
-                    note = int(self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 4)
+                    note = int(self.__applyKernelToFrame(frame, reduceFrameBy, kernel, factor) / 4)
 
                     notesCounter += 1
                     notes.append(currentTrack.createNoteVolTuple(note, self.volume))
@@ -488,7 +490,7 @@ class Generator:
                             imagesCounter += 1
                             
                              # Implementation
-                            normedValue = self.__applyKernelToFrame(frame, everyNPixels, kernel, factor) / 255
+                            normedValue = self.__applyKernelToFrame(frame, reduceFrameBy, kernel, factor) / 255
 
                             if normedValue > 1:
                                 normedValue = 1
@@ -504,10 +506,10 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def __applyKernelToFrame(self, frame, everyNPixels, kernel, factor):
+    def __applyKernelToFrame(self, frame, reduceFrameBy, kernel, factor):
         kernelRadius = int(len(kernel) / 2)
-        frameW = int(len(frame) / everyNPixels)
-        frameH = int(len(frame[0]) / everyNPixels)
+        frameW = int(len(frame) / reduceFrameBy)
+        frameH = int(len(frame[0]) / reduceFrameBy)
         result = 0
 
         for i in range(kernelRadius, frameW - kernelRadius):
@@ -520,11 +522,12 @@ class Generator:
         n = frameW * frameH
         return int((result * factor) / n)
 
-    def averageRGB(self, everyNPixels = 100):
+    def averageRGB(self, reduceFrameBy = 100):
         """
         Create a track based on the track parameters and the average color of the video.
 
-        everyNPixels : takes one pixel every N pixels
+        reduceFrameBy :  reduce every frame of the video, if the frame is 1000x1000
+                            the resulting frame will be 10x10
         """
 
         # Init vars
@@ -541,9 +544,9 @@ class Generator:
             imagesCounterTot += 1
             imagesCounter += 1
         
-            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+            averageR = self.__averageRGBChoiceOneFrame(frame, 0, reduceFrameBy)
+            averageG = self.__averageRGBChoiceOneFrame(frame, 1, reduceFrameBy)
+            averageB = self.__averageRGBChoiceOneFrame(frame, 2, reduceFrameBy)
             averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
 
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageRGBNorm)
@@ -559,9 +562,9 @@ class Generator:
                 break
             else:
                 if imagesCounter % everyNImages == 0:
-                    averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-                    averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-                    averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+                    averageR = self.__averageRGBChoiceOneFrame(frame, 0, reduceFrameBy)
+                    averageG = self.__averageRGBChoiceOneFrame(frame, 1, reduceFrameBy)
+                    averageB = self.__averageRGBChoiceOneFrame(frame, 2, reduceFrameBy)
                     note = int((averageR + averageG + averageB) / 3 / 4)
 
                     notesCounter += 1
@@ -580,9 +583,9 @@ class Generator:
                             ret, frame = cap.read()
                             imagesCounter += 1
         
-                            averageR = self.__averageRGBChoiceOneFrame(frame, 0, everyNPixels)
-                            averageG = self.__averageRGBChoiceOneFrame(frame, 1, everyNPixels)
-                            averageB = self.__averageRGBChoiceOneFrame(frame, 2, everyNPixels)
+                            averageR = self.__averageRGBChoiceOneFrame(frame, 0, reduceFrameBy)
+                            averageG = self.__averageRGBChoiceOneFrame(frame, 1, reduceFrameBy)
+                            averageB = self.__averageRGBChoiceOneFrame(frame, 2, reduceFrameBy)
                             averageRGBNorm = (averageR + averageG + averageB) / 3 / 255
 
                             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageRGBNorm)
@@ -594,11 +597,12 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def averageRGBChannel(self, colorChannel, everyNPixels = 100):
+    def averageRGBChannel(self, colorChannel, reduceFrameBy = 100):
         """
         Create a track based on the track parameters and the average red, green or blue color of the video.
 
-        everyNPixels :      takes one pixel every N pixels
+        reduceFrameBy :  reduce every frame of the video, if the frame is 1000x1000
+                            the resulting frame will be 10x10
         colorChannel :      0 = blue, 1 = green, 2 = red
         """
 
@@ -616,7 +620,7 @@ class Generator:
             imagesCounterTot += 1
             imagesCounter += 1
 
-            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 255
+            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, reduceFrameBy) / 255
             
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageChannelNorm)
         
@@ -631,7 +635,7 @@ class Generator:
                 break
             else:
                 if imagesCounter % everyNImages == 0:
-                    note = int(self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 4)
+                    note = int(self.__averageRGBChoiceOneFrame(frame, colorChannel, reduceFrameBy) / 4)
 
                     notesCounter += 1
                     notes.append(currentTrack.createNoteVolTuple(note, self.volume))
@@ -649,7 +653,7 @@ class Generator:
                             ret, frame = cap.read()
                             imagesCounter += 1
                             
-                            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, everyNPixels) / 255
+                            averageChannelNorm = self.__averageRGBChoiceOneFrame(frame, colorChannel, reduceFrameBy) / 255
 
                             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageChannelNorm)
         
@@ -660,14 +664,15 @@ class Generator:
         self.tracks.append(currentTrack)
         self.__resetTrackParams()
 
-    def __averageRGBChoiceOneFrame(self, frame, colorChannel, everyNPixels):
+    def __averageRGBChoiceOneFrame(self, frame, colorChannel, reduceFrameBy):
         """
         Compute a note between [0 ; 255] based on the average of
         red, green or blue in a given frame.
 
         frame :             the images
         colorChannel :      0 = red, 1 = green, 2 = blue
-        everyNPixels :      take one pixel every n pixels on the image
+        reduceFrameBy :  reduce every frame of the video, if the frame is 1000x1000
+                            the resulting frame will be 10x10
         """
 
         vect = frame.shape
@@ -675,11 +680,15 @@ class Generator:
         dimY = vect[1]
 
         averageColor = 0
-        everyNPixels = int(math.sqrt(everyNPixels))
+        pixelsNb = 0
+        for x in range(0, dimX, reduceFrameBy):
+            for y in range(0, dimY, reduceFrameBy):
+                averageColor += frame[x][y][colorChannel]
+                pixelsNb += 1
 
-        averageColor = cv2.mean(frame[:, :, colorChannel])
+        averageColor /= pixelsNb
 
-        return averageColor[0]
+        return averageColor
 
     def videoCap(self, videoName):
         """
