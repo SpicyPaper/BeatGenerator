@@ -522,12 +522,22 @@ class Generator:
         for i in range(kernelRadius, frameW - kernelRadius):
             for j in range(kernelRadius, frameW - kernelRadius):
                 sum = 0
-                for m in range(-kernelRadius, kernelRadius):
-                    for n in range(-kernelRadius, kernelRadius):
-                        sum += frame[i + m][j + n] * kernel[m + kernelRadius + 1][n + kernelRadius + 1]
-                result += int((sum[0] + sum[1] + sum[2]) / 3)
+                for m in range(-kernelRadius, kernelRadius + 1):
+                    for n in range(-kernelRadius, kernelRadius + 1):
+                        pixel = frame[i + m][j + n]
+                        kernel_value = kernel[m + kernelRadius][n + kernelRadius]
+                        r = pixel[0] * kernel_value
+                        g = pixel[1] * kernel_value
+                        b = pixel[2] * kernel_value
+                        sum += (r + g + b) / 3
+                result += sum
         n = frameW * frameH
-        return int((result * factor) / n)
+        result = int((result * factor) / n)
+        if result > 255:
+            result = 255
+        if result < 1:
+            result = 1
+        return result / 4
 
     def averageRGB(self, reduceFrameBy = 100):
         """
