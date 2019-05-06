@@ -182,7 +182,7 @@ class Generator:
                 print("  | Num : {}".format(track.num))
                 print("  | Instru : {}".format(track.instru))
                 print("  | Bloc duration {}".format(track.blocDuration))
-            self.midi.addProgramChange(track.num+1, track.num, 0, track.instru)
+            self.midi.addProgramChange(track.num, track.num, 0, track.instru)
 
             time = 0
             for i, (notes, (noteDuration, tempo)) in enumerate(zip(track.notes, track.blocInfos)):
@@ -200,7 +200,7 @@ class Generator:
                 
                 for note, volume in notes:
 
-                    self.midi.addNote(track.num, 0, note, time, noteDuration, volume)
+                    self.midi.addNote(track.num, track.num, note, time, noteDuration, volume)
                     time += noteDuration
 
         self.midiPath = os.path.join(self.rootPath, 'sounds', self.videoName + '.mid')
