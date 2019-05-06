@@ -49,24 +49,6 @@ class Generator:
         print("\n                                                 Traitement d'image - 2019")
         print("\n  Progress:")
 
-    def __printProgress(self, current, max):
-        progress = int(100 * current / max)
-        current = int(progress / 2)
-        print(" [", end='')
-        for i in range (current):
-            print("=", end='')
-        for i in range (50 - current):
-            print(" ", end='')
-        print("]", end='')
-
-        if (progress < 100):
-            print(" %d" % progress, "%", end='\r')
-        else:
-            print(" %d" % progress, "%")
-
-    def __printResult(self, time):
-        print("  Time taken: %d" % time, "second(s)")
-
     def __getNumberNotes(self, musicDuration, tempo):
         """
         Return the number of notes that the music must
@@ -200,7 +182,7 @@ class Generator:
                 print("  | Num : {}".format(track.num))
                 print("  | Instru : {}".format(track.instru))
                 print("  | Bloc duration {}".format(track.blocDuration))
-            self.midi.addProgramChange(track.num, 0, 0, track.instru)
+            self.midi.addProgramChange(track.num+1, track.num, 0, track.instru)
 
             time = 0
             for i, (notes, (noteDuration, tempo)) in enumerate(zip(track.notes, track.blocInfos)):
@@ -224,19 +206,6 @@ class Generator:
         self.midiPath = os.path.join(self.rootPath, 'sounds', self.videoName + '.mid')
         with open(self.midiPath, "wb") as output_file:
             self.midi.writeFile(output_file)
-
-    def random(self, tracks):
-        start_time = time.clock()
-        self.__printTitle("Random Tracks Algorithm (%d tracks)" % tracks)
-        for i in tqdm(range(tracks)):
-            track = i
-            tempo = random.randint(30, 100)
-            notes = []
-            for j in range (self.__getNumberNotes(self.clip.duration, tempo)):
-                notes.append(random.randint(30, 60))
-            self.result.append((track, tempo, notes))
-            # self.__printProgress(i + 1, tracks)
-        self.__printResult(time.clock() - start_time)
 
     def diffBetween2Images(self, factor, th = 127, maxNote = 64):
         """
@@ -279,14 +248,14 @@ class Generator:
 
                     notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
-        # For each frame in the video
         pbar = tqdm(total = totNbImgInClip)
+        pbar.update(3)
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
             pbar.update(1)
-            # self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
@@ -312,6 +281,7 @@ class Generator:
                             ret, frame = cap.read()
                             imagesCounterTot += 1
                             imagesCounter += 1
+                            pbar.update(1)
                             
                             previousNbOfDiff, note = self.__diffBetween2Images(maxNote, factor, previousNbOfDiff, previousFrame, frame, th)
                             normedValue = note / maxNote
@@ -385,14 +355,14 @@ class Generator:
 
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
-        # For each frame in the video
         pbar = tqdm(total = totNbImgInClip)
+        pbar.update(1)
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
             pbar.update(1)
-            # self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
@@ -464,14 +434,14 @@ class Generator:
 
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, normedValue)
         
-        # For each frame in the video
         pbar = tqdm(total = totNbImgInClip)
+        pbar.update(1)
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
             pbar.update(1)
-            # self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
@@ -568,14 +538,14 @@ class Generator:
 
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageRGBNorm)
         
-        # For each frame in the video
         pbar = tqdm(total = totNbImgInClip)
+        pbar.update(1)
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
             pbar.update(1)
-            # self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
@@ -643,14 +613,14 @@ class Generator:
             
             notesNbPerBloc, noteDuration, totNbImgInClip, everyNImages, currentTrack = self.__computeTrack(currentTrack, averageChannelNorm)
         
-        # For each frame in the video
         pbar = tqdm(total = totNbImgInClip)
+        pbar.update(1)
+        # For each frame in the video
         while(cap.isOpened()):
             ret, frame = cap.read()
             imagesCounterTot += 1
             imagesCounter += 1
             pbar.update(1)
-            # self.__printProgress(imagesCounterTot, totNbImgInClip)
 
             if frame is None:
                 break
