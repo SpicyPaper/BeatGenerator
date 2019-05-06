@@ -522,8 +522,7 @@ class Generator:
             result = 255
         if result < 1:
             result = 1
-        print(result)
-        return result
+        return result / 4
 
     def averageRGB(self, everyNPixels = 100):
         """
