@@ -1,12 +1,11 @@
 import argparse
+import math
 import os
 import random
 import shutil
 import sys
 import time
 from collections import OrderedDict
-import math
-from tqdm import tqdm
 
 import cv2
 import numpy as np
@@ -15,6 +14,7 @@ from midiutil import MIDIFile
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
+from tqdm import tqdm
 
 from Track import Track
 
@@ -22,6 +22,7 @@ from Track import Track
 class Generator:
     
     def __init__(self, videoName):
+        self.printTitle()
         self.rootPath = os.getcwd()
         self.result = []
         self.tracks = []
